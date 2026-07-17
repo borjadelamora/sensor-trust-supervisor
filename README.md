@@ -1,0 +1,19 @@
+# drone-supervisory-framework
+
+Supervisory layer for a simulated quadcopter that keeps the mission going when sensors fail
+or get attacked: GPS spoofing, optical-flow tampering, camera blackout. The core idea is to
+keep an explicit per-sensor trust state by cross-checking sensors against independent
+estimates of the same quantity, and to use a behaviour tree to fall back onto whatever
+navigation source is still trustworthy, instead of blindly trusting the EKF.
+
+Grew out of my Spring 2026 research on UAV sensor attacks.
+
+**Status:** just starting. First job is getting PX4 SITL + Gazebo + ROS 2 running on this
+machine (a Mac, so that's not trivial).
+
+Planned stack: Ubuntu 22.04 (container) · ROS 2 Humble · Gazebo · PX4 SITL · BehaviorTree.CPP.
+C++ for the framework itself, Python for attack injection and analysis.
+
+Rough plan and milestones: [PLAN.md](PLAN.md).
+
+MIT licence.
