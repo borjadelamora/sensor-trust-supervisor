@@ -1,4 +1,4 @@
-# drone-supervisory-framework
+# sensor-trust-supervisor
 
 Supervisory layer for a simulated quadcopter that keeps the mission going when sensors fail
 or get attacked: GPS spoofing, optical-flow tampering, camera blackout. The core idea is to
