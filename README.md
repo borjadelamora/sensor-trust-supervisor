@@ -8,10 +8,10 @@ navigation source is still trustworthy, instead of blindly trusting the EKF.
 
 Grew out of my Spring 2026 research on UAV sensor attacks.
 
-**Status:** just starting. First job is getting PX4 SITL + Gazebo + ROS 2 running on this
-machine (a Mac, so that's not trivial).
+**Status:** just starting. PX4 SITL + Gazebo + ROS 2 now run on this machine, a Windows
+laptop under WSL2 (see ADR-0002); next job is flying it from my own code.
 
-Planned stack: Ubuntu 22.04 (container) · ROS 2 Humble · Gazebo · PX4 SITL · BehaviorTree.CPP.
+Planned stack: Ubuntu 22.04 (WSL2) · ROS 2 Humble · Gazebo · PX4 SITL · BehaviorTree.CPP.
 C++ for the framework itself, Python for attack injection and analysis.
 
 Rough plan and milestones: [PLAN.md](PLAN.md).

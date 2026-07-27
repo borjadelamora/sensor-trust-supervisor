@@ -36,7 +36,7 @@ because it never consults an independent source. So the plan is a layer above th
 
 | | | by |
 |---|---|---|
-| M0 | Sim environment runs on the Mac: SITL hovers, sensor topics publish | 23 Jul |
+| M0 | Sim environment runs: SITL hovers, sensor topics publish | 23 Jul |
 | M1 | Scripted offboard missions plus a logged set of benign flights | 31 Jul |
 | M2 | Attack injector and three monitors publishing live residuals | 8 Aug |
 | M3 | Trust arbiter and behaviour tree; dual-attack scenario handled; tests green | 15 Aug |
