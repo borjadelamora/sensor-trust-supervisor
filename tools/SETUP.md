@@ -125,3 +125,9 @@ rm -f /tmp/px4_lock-0 /tmp/px4-sock-0
 ```
 
 The brackets stop `pkill` matching its own command line.
+
+---
+
+Replayed from a clean shell on 28 July 2026: the workspace and topic checks above pass as
+written. The apt and toolchain steps are the ones this machine was built from, checked against
+what is actually installed rather than run a second time.
