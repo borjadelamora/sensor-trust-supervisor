@@ -1,0 +1,18 @@
+---
+Checks: >
+  bugprone-*,
+  performance-*,
+  modernize-*,
+  readability-*,
+  cppcoreguidelines-*,
+  concurrency-*,
+  -modernize-use-trailing-return-type,
+  -readability-identifier-length,
+  -readability-function-cognitive-complexity
+
+HeaderFilterRegex: 'quorum_.*'
+
+# clang-tidy 14 predates the gnu++23 spelling GCC puts in compile_commands.json.
+ExtraArgs: ['-std=gnu++2b']
+
+WarningsAsErrors: '*'
