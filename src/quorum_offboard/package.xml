@@ -3,7 +3,7 @@
 <package format="3">
   <name>quorum_offboard</name>
   <version>0.0.0</version>
-  <description>Subscribes to PX4 vehicle state and logs altitude</description>
+  <description>Offboard control of a PX4 vehicle: arms, takes off and holds position</description>
   <maintainer email="borja@borjadelamora.com">borja</maintainer>
   <license>MIT</license>
 
