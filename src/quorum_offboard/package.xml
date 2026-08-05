@@ -3,7 +3,7 @@
 <package format="3">
   <name>quorum_offboard</name>
   <version>0.0.0</version>
-  <description>Offboard control of a PX4 vehicle: arms, takes off and holds position</description>
+  <description>Offboard control of a PX4 vehicle: arms, takes off, flies a waypoint list and lands</description>
   <maintainer email="borja@borjadelamora.com">borja</maintainer>
   <license>MIT</license>
 
@@ -12,6 +12,7 @@
   <depend>rclcpp</depend>
   <depend>px4_msgs</depend>
 
+  <test_depend>ament_cmake_gtest</test_depend>
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>
 

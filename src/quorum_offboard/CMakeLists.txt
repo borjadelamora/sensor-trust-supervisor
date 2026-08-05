@@ -23,10 +23,17 @@ if(BUILD_TESTING)
   # comment the line when this package is in a git repo and when
   # a copyright and license is added to all source files
   set(ament_cmake_cpplint_FOUND TRUE)
+  # formatting is governed by .clang-format, not by uncrustify
+  set(ament_cmake_uncrustify_FOUND TRUE)
   ament_lint_auto_find_test_dependencies()
+
+  find_package(ament_cmake_gtest REQUIRED)
+  ament_add_gtest(test_mission test/test_mission.cpp)
+  target_include_directories(test_mission PRIVATE include)
 endif()
 
 add_executable(offboard_node src/offboard_node.cpp)
+target_include_directories(offboard_node PRIVATE include)
 ament_target_dependencies(offboard_node rclcpp px4_msgs)
 
 install(TARGETS offboard_node

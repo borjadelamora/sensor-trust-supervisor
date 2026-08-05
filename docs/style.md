@@ -31,10 +31,21 @@ Format on save is configured. Before committing:
 clang-tidy -p build/<package> <file>
 ```
 
-Warnings are errors there too. Two checks are switched off and it is worth knowing why.
+Warnings are errors there too. Four checks are switched off and it is worth knowing why.
 `readability-function-cognitive-complexity` ends up scoring the expansion of the rclcpp logging
 macros instead of my code, and scored a five-line callback at 52.
 `modernize-use-trailing-return-type` is a house preference I don't share.
+`readability-identifier-length` objects to names like `e` for a caught exception, which is not
+a fight worth having. `bugprone-reserved-identifier` objects to the include-guard names the ROS 2
+convention asks for, and I would rather keep the convention.
+
+Include guards are `QUORUM_OFFBOARD__MISSION_HPP_`: package, file, extension, in that order.
+
+Test directories carry their own `.clang-tidy` switching the magic-number checks off, since
+literal coordinates are rather the point of a test.
+
+Formatting is settled by `.clang-format` alone. `ament_uncrustify` enforces a different brace
+and spacing style, so it is switched off in the package's tests rather than left failing.
 
 ## Naming
 

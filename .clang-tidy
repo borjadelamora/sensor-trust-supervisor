@@ -6,6 +6,7 @@ Checks: >
   readability-*,
   cppcoreguidelines-*,
   concurrency-*,
+  -bugprone-reserved-identifier,
   -modernize-use-trailing-return-type,
   -readability-identifier-length,
   -readability-function-cognitive-complexity
