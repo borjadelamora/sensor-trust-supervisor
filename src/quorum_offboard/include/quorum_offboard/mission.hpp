@@ -33,6 +33,27 @@ struct PositionNed {
   return std::abs(position.down_m - target_down_m) <= tolerance_m;
 }
 
+/// Walks a setpoint @p step_m towards @p target, stopping there rather than overshooting
+[[nodiscard]] inline PositionNed step_towards(const PositionNed& setpoint,
+                                              const PositionNed& target, double step_m)
+{
+  assert(step_m >= 0.0);
+
+  const double diff_north = target.north_m - setpoint.north_m;
+  const double diff_east = target.east_m - setpoint.east_m;
+  const double diff_down = target.down_m - setpoint.down_m;
+  const double distance_m =
+      std::sqrt((diff_north * diff_north) + (diff_east * diff_east) + (diff_down * diff_down));
+
+  if (distance_m <= step_m) {
+    return target;
+  }
+
+  const double fraction = step_m / distance_m;
+  return {setpoint.north_m + (fraction * diff_north), setpoint.east_m + (fraction * diff_east),
+          setpoint.down_m + (fraction * diff_down)};
+}
+
 class Mission {
 public:
   explicit Mission(std::vector<PositionNed> waypoints) : waypoints_(std::move(waypoints))

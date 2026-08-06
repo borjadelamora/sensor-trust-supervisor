@@ -1,0 +1,16 @@
+offboard_node:
+  ros__parameters:
+    frame: ned
+    takeoff_altitude_m: 5.0
+    cruise_speed_mps: 3.0
+    acceptance_radius_m: 1.5
+    hold_time_s: 2.0
+    waypoints: ["ne", "nw", "sw", "home"]
+    ne:
+      position_ned_m: [20.0, 0.0, -5.0]
+    nw:
+      position_ned_m: [20.0, 20.0, -5.0]
+    sw:
+      position_ned_m: [0.0, 20.0, -5.0]
+    home:
+      position_ned_m: [0.0, 0.0, -5.0]

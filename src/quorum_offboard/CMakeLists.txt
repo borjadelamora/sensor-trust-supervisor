@@ -1,4 +1,6 @@
 cmake_minimum_required(VERSION 3.8)
+# Jammy defaults to g++-11, which has no <expected>. Only takes effect on a clean configure.
+set(CMAKE_CXX_COMPILER g++-12)
 project(quorum_offboard)
 
 set(CMAKE_CXX_STANDARD 23)
@@ -30,6 +32,9 @@ if(BUILD_TESTING)
   find_package(ament_cmake_gtest REQUIRED)
   ament_add_gtest(test_mission test/test_mission.cpp)
   target_include_directories(test_mission PRIVATE include)
+
+  ament_add_gtest(test_mission_config test/test_mission_config.cpp)
+  target_include_directories(test_mission_config PRIVATE include)
 endif()
 
 add_executable(offboard_node src/offboard_node.cpp)
@@ -38,5 +43,8 @@ ament_target_dependencies(offboard_node rclcpp px4_msgs)
 
 install(TARGETS offboard_node
   DESTINATION lib/${PROJECT_NAME})
+
+install(DIRECTORY config
+  DESTINATION share/${PROJECT_NAME})
 
 ament_package()

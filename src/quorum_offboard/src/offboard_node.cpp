@@ -3,8 +3,11 @@
 #include <cmath>
 #include <cstdint>
 #include <exception>
+#include <expected>
 #include <memory>
 #include <optional>
+#include <string>
+#include <utility>
 #include <vector>
 
 #include "px4_msgs/msg/offboard_control_mode.hpp"
@@ -14,6 +17,7 @@
 #include "rclcpp/rclcpp.hpp"
 
 #include "quorum_offboard/mission.hpp"
+#include "quorum_offboard/mission_config.hpp"
 
 using namespace std::chrono_literals;
 
@@ -21,6 +25,9 @@ namespace quorum_offboard {
 
 // 10 Hz. PX4 drops offboard without a stream for COM_OF_LOSS_T (1 s default).
 constexpr auto kTickPeriod = 100ms;
+
+// Nominal, not measured: runs stay comparable.
+constexpr double kTickPeriodS = std::chrono::duration<double>(kTickPeriod).count();
 
 // DO_SET_MODE params: base mode bit 0 = custom, PX4 custom main mode 6 = offboard.
 constexpr float kBaseModeCustom = 1.0F;
@@ -33,9 +40,6 @@ constexpr float kHoldYawRad = 0.0F;
 // PX4 refuses offboard until the setpoint stream is already running.
 constexpr uint64_t kPrimingTicks = 10;
 
-// Horizontal radius within which a waypoint counts as reached.
-constexpr double kAcceptanceRadiusM = 1.5;
-
 // Without this the radius trips mid-approach and the corner rounds off.
 constexpr double kSettleSpeedMps = 0.5;
 
@@ -44,10 +48,6 @@ constexpr double kAltitudeToleranceM = 0.5;
 
 // Height above home below which the vehicle counts as down.
 constexpr double kLandedAltitudeM = 0.5;
-
-constexpr double kLegLengthM = 20.0;
-constexpr double kCruiseAltitudeM = 5.0;
-constexpr double kCruiseDownM = -kCruiseAltitudeM;
 
 constexpr int64_t kNsPerUs = 1000;
 constexpr uint64_t kLogPeriodMs = 1000;
@@ -58,14 +58,25 @@ struct CommandParams {
   float param2{};
 };
 
-[[nodiscard]] std::vector<PositionNed> square_mission_ned()
+[[nodiscard]] std::expected<MissionSpec, MissionError> read_mission(rclcpp::Node& node)
 {
-  return {
-      {kLegLengthM, 0.0, kCruiseDownM},
-      {kLegLengthM, kLegLengthM, kCruiseDownM},
-      {0.0, kLegLengthM, kCruiseDownM},
-      {0.0, 0.0, kCruiseDownM},
-  };
+  const std::string frame = node.declare_parameter<std::string>("frame", "");
+  const double takeoff_altitude_m = node.declare_parameter<double>("takeoff_altitude_m", 0.0);
+  const double cruise_speed_mps = node.declare_parameter<double>("cruise_speed_mps", 0.0);
+  const double acceptance_radius_m = node.declare_parameter<double>("acceptance_radius_m", 0.0);
+  const double hold_time_s = node.declare_parameter<double>("hold_time_s", 0.0);
+
+  const std::vector<std::string> names =
+      node.declare_parameter("waypoints", std::vector<std::string>{});
+  std::vector<RawWaypoint> raw_waypoints;
+  for (const std::string& name : names) {
+    const std::vector<double> position_ned_m =
+        node.declare_parameter(name + ".position_ned_m", std::vector<double>{});
+    raw_waypoints.push_back(RawWaypoint{name, position_ned_m});
+  }
+
+  return make_mission_spec(RawMission{frame, takeoff_altitude_m, cruise_speed_mps,
+                                      acceptance_radius_m, hold_time_s, std::move(raw_waypoints)});
 }
 
 // VehicleLocalPosition is already NED: x north, y east, z down.
@@ -79,6 +90,9 @@ struct CommandParams {
   return {static_cast<float>(position.north_m), static_cast<float>(position.east_m),
           static_cast<float>(position.down_m)};
 }
+
+// Convert height above home to down-positive.
+[[nodiscard]] constexpr double to_down_m(double altitude_m) { return -altitude_m; }
 
 class OffboardNode : public rclcpp::Node {
 public:
@@ -101,11 +115,25 @@ public:
     vehicle_command_pub_ =
         this->create_publisher<px4_msgs::msg::VehicleCommand>("/fmu/in/vehicle_command", 2);
 
-    timer_ = this->create_wall_timer(kTickPeriod, [this]() { tick(); });
-
     subscription_ = this->create_subscription<px4_msgs::msg::VehicleLocalPosition>(
         "/fmu/out/vehicle_local_position_v1", rclcpp::SensorDataQoS(),
         [this](const px4_msgs::msg::VehicleLocalPosition& msg) { topic_callback(msg); });
+  }
+
+  // Nothing ticks until a mission is loaded, so a rejected file cannot fly.
+  [[nodiscard]] std::expected<void, MissionError> load_mission()
+  {
+    const std::expected<MissionSpec, MissionError> spec = read_mission(*this);
+    if (!spec.has_value()) {
+      return std::unexpected(spec.error());
+    }
+
+    spec_ = spec.value();
+    mission_.emplace(spec_.waypoints);
+    commanded_ned_ = PositionNed{0.0, 0.0, to_down_m(spec_.takeoff_altitude_m)};
+    hold_ticks_required_ = static_cast<uint64_t>(std::llround(spec_.hold_time_s / kTickPeriodS));
+    timer_ = this->create_wall_timer(kTickPeriod, [this]() { tick(); });
+    return {};
   }
 
 private:
@@ -116,7 +144,8 @@ private:
 
   [[nodiscard]] PositionNed active_target() const
   {
-    return (state_ == State::Mission ? mission_.current() : PositionNed{0.0, 0.0, kCruiseDownM});
+    return (state_ == State::Mission ? commanded_ned_
+                                     : PositionNed{0.0, 0.0, to_down_m(spec_.takeoff_altitude_m)});
   }
 
   // The stream must run while we hold offboard, and must stop once PX4 is landing.
@@ -152,17 +181,25 @@ private:
         break;
 
       case State::Takeoff:
-        if (is_at_altitude(position, kCruiseDownM, kAltitudeToleranceM)) {
+        if (is_at_altitude(position, to_down_m(spec_.takeoff_altitude_m), kAltitudeToleranceM)) {
           state_ = State::Mission;
         }
         break;
 
       case State::Mission:
-        if (is_within(position, mission_.current(), kAcceptanceRadiusM) &&
+        commanded_ned_ = step_towards(commanded_ned_, mission_->current(),
+                                      spec_.cruise_speed_mps * kTickPeriodS);
+
+        if (is_within(position, mission_->current(), spec_.acceptance_radius_m) &&
             horizontal_speed_mps_ <= kSettleSpeedMps) {
-          mission_.advance();
-          if (mission_.finished()) {
-            state_ = State::Landing;
+          if (hold_ticks_ < hold_ticks_required_) {
+            ++hold_ticks_;
+          } else {
+            hold_ticks_ = 0;
+            mission_->advance();
+            if (mission_->finished()) {
+              state_ = State::Landing;
+            }
           }
         }
         break;
@@ -232,12 +269,18 @@ private:
   uint64_t priming_ticks_{0};
   bool land_commanded_{false};
 
+  // The setpoint actually streamed, which trails the waypoint at cruise speed.
+  PositionNed commanded_ned_{};
+  uint64_t hold_ticks_{0};
+  uint64_t hold_ticks_required_{0};
+
   std::optional<PositionNed> last_position_;
   double horizontal_speed_mps_{0.0};
 
   State state_{State::Priming};
 
-  Mission mission_{square_mission_ned()};
+  MissionSpec spec_{};
+  std::optional<Mission> mission_;
 };
 }  // namespace quorum_offboard
 
@@ -245,7 +288,17 @@ int main(int argc, char* argv[])
 {
   try {
     rclcpp::init(argc, argv);
-    rclcpp::spin(std::make_shared<quorum_offboard::OffboardNode>());
+    const auto node = std::make_shared<quorum_offboard::OffboardNode>();
+
+    const auto loaded = node->load_mission();
+    if (!loaded.has_value()) {
+      RCLCPP_ERROR(node->get_logger(), "mission rejected: %s",
+                   std::string(quorum_offboard::to_string(loaded.error())).c_str());
+      rclcpp::shutdown();
+      return 1;
+    }
+
+    rclcpp::spin(node);
     rclcpp::shutdown();
   } catch (const std::exception& e) {
     RCLCPP_ERROR(rclcpp::get_logger("offboard_node"), "fatal: %s", e.what());

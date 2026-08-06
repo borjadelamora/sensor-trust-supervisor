@@ -38,6 +38,39 @@ TEST(IsAtAltitude, AcceptsEitherSideOfTheTolerance)
   EXPECT_FALSE(is_at_altitude({0.0, 0.0, -4.2}, -5.0, kToleranceM));
 }
 
+TEST(StepTowards, CoversTheStepDistanceAlongTheLine)
+{
+  const PositionNed stepped = step_towards({0.0, 0.0, -5.0}, {30.0, 40.0, -5.0}, 5.0);
+
+  EXPECT_DOUBLE_EQ(stepped.north_m, 3.0);
+  EXPECT_DOUBLE_EQ(stepped.east_m, 4.0);
+  EXPECT_DOUBLE_EQ(stepped.down_m, -5.0);
+}
+
+TEST(StepTowards, StopsAtTheTargetRatherThanOvershooting)
+{
+  const PositionNed target{2.0, 0.0, -5.0};
+  const PositionNed stepped = step_towards({0.0, 0.0, -5.0}, target, 10.0);
+
+  EXPECT_DOUBLE_EQ(stepped.north_m, target.north_m);
+  EXPECT_DOUBLE_EQ(stepped.east_m, target.east_m);
+}
+
+TEST(StepTowards, ClimbsAsWellAsTranslates)
+{
+  const PositionNed stepped = step_towards({0.0, 0.0, 0.0}, {0.0, 0.0, -10.0}, 2.0);
+
+  EXPECT_DOUBLE_EQ(stepped.down_m, -2.0);
+}
+
+TEST(StepTowards, HoldsPositionOnAZeroStep)
+{
+  const PositionNed stepped = step_towards({1.0, 2.0, -5.0}, {30.0, 40.0, -5.0}, 0.0);
+
+  EXPECT_DOUBLE_EQ(stepped.north_m, 1.0);
+  EXPECT_DOUBLE_EQ(stepped.east_m, 2.0);
+}
+
 TEST(Mission, WalksTheWaypointsInOrderThenFinishes)
 {
   Mission mission{{{1.0, 2.0, -5.0}, {3.0, 4.0, -5.0}}};

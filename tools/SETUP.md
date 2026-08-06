@@ -24,8 +24,11 @@ Install WSL2 with Ubuntu 22.04 from Windows (`wsl --install -d Ubuntu-22.04`), t
 
 ```bash
 sudo apt update && sudo apt upgrade -y
-sudo apt install -y git build-essential cmake python3-pip
+sudo apt install -y git build-essential cmake python3-pip g++-12
 ```
+
+`g++-12` is not optional: 22.04 ships GCC 11 by default, which has no `<expected>`, and the
+packages here are C++23.
 
 ROS 2 Humble goes in from the ROS apt repository at `packages.ros.org` (`ros-humble-desktop`).
 Install it before the PX4 step below. Gazebo Harmonic arrives with the PX4 toolchain script.
