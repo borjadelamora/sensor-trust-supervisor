@@ -13,3 +13,4 @@ This folder is a collection of Architecture Decision Records following the forma
 |-----|-------|--------|
 | [0001](0001-record-architecture-decisions.md) | Record architecture decisions | Accepted |
 | [0002](0002-dev-environment-and-px4-pin.md) | Development environment and PX4 version pin | Accepted |
+| [0003](0003-textured-world-for-optical-flow.md) | Textured simulation world for optical flow | Accepted |
