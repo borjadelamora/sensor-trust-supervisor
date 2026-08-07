@@ -3,6 +3,11 @@ build/
 install/
 log/
 
+# Bag payloads: the manifests and metadata stay
+data/**/*.db3
+data/**/*.mcap
+data/flakes.log
+
 # Python
 __pycache__/
 *.py[cod]
