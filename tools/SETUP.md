@@ -106,6 +106,58 @@ To see sensor data arriving over the bridge:
 ros2 topic echo /fmu/out/vehicle_gps_position --qos-reliability best_effort --once
 ```
 
+## Optical flow
+
+The flow work uses the `x500_flow` airframe, which carries a downward camera and a lidar, in a
+world with ground texture:
+
+```bash
+PX4_GZ_WORLD=baylands HEADLESS=1 make px4_sitl gz_x500_flow
+```
+
+Baylands comes from Gazebo Fuel, so the first launch downloads about 400 MB into `~/.gz/fuel`
+and takes a few minutes. The reason for the world is [ADR-0003](../docs/decisions/0003-textured-world-for-optical-flow.md):
+on the default world the flow sensor sees a blank grey plane and reads roughly a tenth of true
+speed.
+
+None of the flow topics reach ROS 2 as the bridge ships. `dds_topics.yaml` in
+`~/PX4-Autopilot/src/modules/uxrce_dds_client/` lists what gets bridged, and flow appears there
+only under `subscriptions:`, which is the wrong direction. Three entries go into `publications:`:
+
+```yaml
+  - topic: /fmu/out/vehicle_optical_flow_vel
+    type: px4_msgs::msg::VehicleOpticalFlowVel
+
+  - topic: /fmu/out/sensor_optical_flow
+    type: px4_msgs::msg::SensorOpticalFlow
+
+  - topic: /fmu/out/distance_sensor
+    type: px4_msgs::msg::DistanceSensor
+```
+
+Then `make px4_sitl` again, since the file is read at build time and the bridge code is generated
+from it. `px4_msgs` at `v1.17.0` already has all three message definitions, so it needs no
+rebuild.
+
+`vehicle_optical_flow_vel` is the one that matters: flow velocity in m/s, scaled by range and
+compensated for rotation, published by the sensors module. There is also an
+`estimator_optical_flow_vel`, which is EKF2's own view of the same thing and so not independent
+of the estimator.
+
+The airframe turns GPS off (`4021_gz_x500_flow` sets `SYS_HAS_GPS 0`, `SIM_GPS_USED 0`,
+`EKF2_GPS_CTRL 0`), which is right for a flow-only demo and wrong here, since the point is to
+compare flow against something else. Restore it once and save:
+
+```
+param set SYS_HAS_GPS 1
+param set SIM_GPS_USED 10
+param set EKF2_GPS_CTRL 7
+param save
+```
+
+Saved values beat the airframe file, which sets defaults rather than values, so this survives
+restarts. Reboot after saving: `SYS_HAS_GPS` is only read at boot.
+
 ## Things that caught me out
 
 **`ros2 topic hz` reports nothing on `/fmu/out/*` topics.** In Humble it has no QoS flag, so
@@ -128,6 +180,15 @@ rm -f /tmp/px4_lock-0 /tmp/px4-sock-0
 ```
 
 The brackets stop `pkill` matching its own command line.
+
+**`SIM_GPS_USED` sets the satellite count.** PX4 defaults it to 10 and the flow airframe sets it
+to 0. Setting it to 1 gives a receiver with one satellite, which reports `fix_type: 0` forever
+and fails preflight with `GPS fix too low`.
+
+**Topics appear before the estimator has a position.** `/fmu/out/*` shows up in `ros2 topic
+list` while EKF2 still reports `ekf2 missing data`, so a script that starts flying at that point
+sends setpoints nobody acts on. `record_flight.sh` waits for `xy_valid` on
+`vehicle_local_position_v1`.
 
 ---
 
