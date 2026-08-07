@@ -1,10 +1,10 @@
 run: 20260807_square_s11
 mission: square
+model: gz_x500_flow
+world: baylands
 seed: 11
-date: 2026-08-07T14:59:38+02:00
-commit: 8520fb4
+date: 2026-08-07T22:17:32+02:00
+commit: 36060e0
 px4_version: v1.17.0
-home_lat: 47.3977299
-home_lon: 8.5455965
-home_yaw_rad: 4.7016
+home_yaw_rad: 2.6393
 exit_code: 0

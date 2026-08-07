@@ -2,47 +2,65 @@ rosbag2_bagfile_information:
   version: 5
   storage_identifier: sqlite3
   duration:
-    nanoseconds: 58264667703
+    nanoseconds: 57375006007
   starting_time:
-    nanoseconds_since_epoch: 1786107680988255782
-  message_count: 16155
+    nanoseconds_since_epoch: 1786133941170710349
+  message_count: 24102
   topics_with_message_count:
+    - topic_metadata:
+        name: /fmu/out/vehicle_optical_flow_vel
+        type: px4_msgs/msg/VehicleOpticalFlowVel
+        serialization_format: cdr
+        offered_qos_profiles: "- history: 3\n  depth: 0\n  reliability: 2\n  durability: 1\n  deadline:\n    sec: 9223372036\n    nsec: 854775807\n  lifespan:\n    sec: 9223372036\n    nsec: 854775807\n  liveliness: 1\n  liveliness_lease_duration:\n    sec: 9223372036\n    nsec: 854775807\n  avoid_ros_namespace_conventions: false"
+      message_count: 2780
     - topic_metadata:
         name: /fmu/out/vehicle_local_position_v1
         type: px4_msgs/msg/VehicleLocalPosition
         serialization_format: cdr
         offered_qos_profiles: "- history: 3\n  depth: 0\n  reliability: 2\n  durability: 1\n  deadline:\n    sec: 9223372036\n    nsec: 854775807\n  lifespan:\n    sec: 9223372036\n    nsec: 854775807\n  liveliness: 1\n  liveliness_lease_duration:\n    sec: 9223372036\n    nsec: 854775807\n  avoid_ros_namespace_conventions: false"
-      message_count: 2849
+      message_count: 2780
     - topic_metadata:
         name: /fmu/out/vehicle_land_detected
         type: px4_msgs/msg/VehicleLandDetected
         serialization_format: cdr
         offered_qos_profiles: "- history: 3\n  depth: 0\n  reliability: 2\n  durability: 1\n  deadline:\n    sec: 9223372036\n    nsec: 854775807\n  lifespan:\n    sec: 9223372036\n    nsec: 854775807\n  liveliness: 1\n  liveliness_lease_duration:\n    sec: 9223372036\n    nsec: 854775807\n  avoid_ros_namespace_conventions: false"
-      message_count: 64
+      message_count: 63
     - topic_metadata:
         name: /fmu/out/vehicle_status_v1
         type: px4_msgs/msg/VehicleStatus
         serialization_format: cdr
         offered_qos_profiles: "- history: 3\n  depth: 0\n  reliability: 2\n  durability: 1\n  deadline:\n    sec: 9223372036\n    nsec: 854775807\n  lifespan:\n    sec: 9223372036\n    nsec: 854775807\n  liveliness: 1\n  liveliness_lease_duration:\n    sec: 9223372036\n    nsec: 854775807\n  avoid_ros_namespace_conventions: false"
-      message_count: 117
+      message_count: 114
     - topic_metadata:
         name: /fmu/out/vehicle_gps_position
         type: px4_msgs/msg/SensorGps
         serialization_format: cdr
         offered_qos_profiles: "- history: 3\n  depth: 0\n  reliability: 2\n  durability: 1\n  deadline:\n    sec: 9223372036\n    nsec: 854775807\n  lifespan:\n    sec: 9223372036\n    nsec: 854775807\n  liveliness: 1\n  liveliness_lease_duration:\n    sec: 9223372036\n    nsec: 854775807\n  avoid_ros_namespace_conventions: false"
-      message_count: 1727
+      message_count: 1685
     - topic_metadata:
         name: /fmu/out/vehicle_attitude
         type: px4_msgs/msg/VehicleAttitude
         serialization_format: cdr
         offered_qos_profiles: "- history: 3\n  depth: 0\n  reliability: 2\n  durability: 1\n  deadline:\n    sec: 9223372036\n    nsec: 854775807\n  lifespan:\n    sec: 9223372036\n    nsec: 854775807\n  liveliness: 1\n  liveliness_lease_duration:\n    sec: 9223372036\n    nsec: 854775807\n  avoid_ros_namespace_conventions: false"
-      message_count: 5699
+      message_count: 5560
+    - topic_metadata:
+        name: /fmu/out/sensor_optical_flow
+        type: px4_msgs/msg/SensorOpticalFlow
+        serialization_format: cdr
+        offered_qos_profiles: "- history: 3\n  depth: 0\n  reliability: 2\n  durability: 1\n  deadline:\n    sec: 9223372036\n    nsec: 854775807\n  lifespan:\n    sec: 9223372036\n    nsec: 854775807\n  liveliness: 1\n  liveliness_lease_duration:\n    sec: 9223372036\n    nsec: 854775807\n  avoid_ros_namespace_conventions: false"
+      message_count: 2780
     - topic_metadata:
         name: /fmu/out/sensor_combined
         type: px4_msgs/msg/SensorCombined
         serialization_format: cdr
         offered_qos_profiles: "- history: 3\n  depth: 0\n  reliability: 2\n  durability: 1\n  deadline:\n    sec: 9223372036\n    nsec: 854775807\n  lifespan:\n    sec: 9223372036\n    nsec: 854775807\n  liveliness: 1\n  liveliness_lease_duration:\n    sec: 9223372036\n    nsec: 854775807\n  avoid_ros_namespace_conventions: false"
-      message_count: 5699
+      message_count: 5560
+    - topic_metadata:
+        name: /fmu/out/distance_sensor
+        type: px4_msgs/msg/DistanceSensor
+        serialization_format: cdr
+        offered_qos_profiles: "- history: 3\n  depth: 0\n  reliability: 2\n  durability: 1\n  deadline:\n    sec: 9223372036\n    nsec: 854775807\n  lifespan:\n    sec: 9223372036\n    nsec: 854775807\n  liveliness: 1\n  liveliness_lease_duration:\n    sec: 9223372036\n    nsec: 854775807\n  avoid_ros_namespace_conventions: false"
+      message_count: 2780
   compression_format: ""
   compression_mode: ""
   relative_file_paths:
@@ -50,7 +68,7 @@ rosbag2_bagfile_information:
   files:
     - path: 20260807_square_s13_0.db3
       starting_time:
-        nanoseconds_since_epoch: 1786107680988255782
+        nanoseconds_since_epoch: 1786133941170710349
       duration:
-        nanoseconds: 58264667703
-      message_count: 16155
+        nanoseconds: 57375006007
+      message_count: 24102
