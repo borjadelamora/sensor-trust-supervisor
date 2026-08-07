@@ -1,0 +1,10 @@
+run: 20260807_square_s17
+mission: square
+seed: 17
+date: 2026-08-07T15:07:41+02:00
+commit: 8520fb4
+px4_version: v1.17.0
+home_lat: 47.3977432
+home_lon: 8.5455896
+home_yaw_rad: 3.4625
+exit_code: 0
