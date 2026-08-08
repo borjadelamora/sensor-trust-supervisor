@@ -34,12 +34,15 @@ source "$REPO/install/setup.bash"
 RECORDER_PID=""
 PX4_PID=""
 AGENT_PID=""
+RELAY_PID=""
 
 kill_stack() {
   pkill -9 -f ninja || true
   kill -9 "$PX4_PID" 2>/dev/null || true
   kill -9 "$AGENT_PID" 2>/dev/null || true
+  kill -9 "$RELAY_PID" 2>/dev/null || true
   pkill -9 -f MicroXRCEAgent || true
+  pkill -9 -f relay_node || true
   pkill -9 -f '[g]z sim' || true
   pkill -9 -f 'px4_sitl_default/bin/[p]x4' || true
 }
@@ -111,6 +114,21 @@ until timeout 5 ros2 topic echo --once --qos-reliability best_effort \
   fi
 done
 
+echo "Starting the relay..."
+ros2 run quorum_injector relay_node &
+RELAY_PID=$!
+
+# Everything downstream reads the twins, so a dead relay is a dead run
+WAITED_S=0
+while ! ros2 topic list 2>/dev/null | grep -q '/quorum/vehicle_gps_position'; do
+  sleep 1
+  WAITED_S=$((WAITED_S + 1))
+  if [ "$WAITED_S" -ge 20 ]; then
+    echo "No relayed topics after ${WAITED_S}s"
+    exit 2
+  fi
+done
+
 cd "$REPO"
 TOPICS=(
   /fmu/out/vehicle_gps_position
@@ -119,6 +137,10 @@ TOPICS=(
   /fmu/out/vehicle_local_position_v1
   /fmu/out/vehicle_status_v1
   /fmu/out/vehicle_land_detected
+  /quorum/vehicle_gps_position
+  /quorum/sensor_combined
+  /quorum/sensor_optical_flow
+  /quorum/vehicle_optical_flow_vel
 )
 
 # Only the flow airframe carries these
@@ -167,6 +189,7 @@ date: $(date --iso-8601=seconds)
 commit: $(git rev-parse --short HEAD)
 px4_version: $PX4_VERSION
 home_yaw_rad: $HOME_YAW_RAD
+relay: on
 exit_code: $EXIT_CODE
 EOF
 
