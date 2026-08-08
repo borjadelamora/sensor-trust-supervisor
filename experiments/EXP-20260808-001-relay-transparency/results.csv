@@ -1,0 +1,5 @@
+topic,source_count,twin_count,matched_by_timestamp,unmatched_source,field_mismatches
+vehicle_gps_position,1441,1444,1441,0,0
+sensor_combined,4755,4765,4755,0,0
+sensor_optical_flow,2377,2382,2377,0,0
+vehicle_optical_flow_vel,2377,2382,2377,0,0
