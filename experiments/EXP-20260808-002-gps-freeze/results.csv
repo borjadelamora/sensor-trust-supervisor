@@ -1,0 +1,10 @@
+metric,value,unit
+flight_duration,67.7,s
+onset_in_bag,17.68,s
+gps_messages_raw,1461,count
+gps_messages_twin,1445,count
+messages_identical_before_onset,373,count
+held_latitude,37.41230540,deg
+peak_separation,24.8,m
+peak_separation_time,42.8,s
+separation_at_landing,14.9,m
