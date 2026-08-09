@@ -1,0 +1,3 @@
+run,seed,drawn_onset_s,onset_in_bag_s,identical_fixes_before_onset,peak_separation_m,peak_separation_at_s,separation_at_last_fix_m,raw_gps_msgs,twin_gps_msgs,home_yaw_rad,exit_code
+20260810_square_ATK-001-gps-freeze_s1,1,20.05,18.17,523,28.7,37.9,20.3,1667,1671,3.2228,0
+20260810_square_ATK-001-gps-freeze_s2,2,19.05,17.49,480,28.6,37.9,20.4,1605,1609,0.1622,0
