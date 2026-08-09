@@ -1,0 +1,5 @@
+scenario_id: ATK-001
+attack: gps_freeze
+onset_s: 20.0
+onset_jitter_s: 2.0
+seed: 1

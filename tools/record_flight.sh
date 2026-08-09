@@ -1,18 +1,29 @@
 #!/usr/bin/env bash
 set -e
 
-if [ "$#" -lt 2 ] || [ "$#" -gt 3 ]; then
-  echo "Usage: $0 <mission_name> <seed> [px4_model]"
+if [ "$#" -lt 2 ] || [ "$#" -gt 4 ]; then
+  echo "Usage: $0 <mission_name> <seed> [px4_model] [scenario_file]"
   exit 1
 fi
 
 MISSION=$1
 SEED=$2
 MODEL=${3:-gz_x500_flow}
+SCENARIO=${4:-}
 
 REPO=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 MISSION_FILE="$REPO/src/quorum_offboard/config/missions/${MISSION}.yaml"
-RUN="$(date +%Y%m%d)_${MISSION}_s${SEED}"
+
+SCENARIO_NAME=none
+if [ -n "$SCENARIO" ]; then
+  case $SCENARIO in
+    /*) ;;
+    *) SCENARIO="$REPO/$SCENARIO" ;;
+  esac
+  SCENARIO_NAME=$(basename "$SCENARIO" .yaml)
+fi
+
+RUN="$(date +%Y%m%d)_${MISSION}_${SCENARIO_NAME}_s${SEED}"
 BAG_DIR="$REPO/data/$RUN"
 
 # Baylands is a large world and can take a couple of minutes to load
@@ -22,6 +33,11 @@ FLIGHT_TIMEOUT_S=300
 # Exit status: 1 bad arguments, 2 stack never came up, 124 flight overran, else the node's.
 if [ ! -f "$MISSION_FILE" ]; then
   echo "No mission file at $MISSION_FILE"
+  exit 1
+fi
+
+if [ -n "$SCENARIO" ] && [ ! -f "$SCENARIO" ]; then
+  echo "No scenario file at $SCENARIO"
   exit 1
 fi
 
@@ -75,7 +91,9 @@ rm -rf "$BAG_DIR"
 RANDOM=$SEED
 
 # Yaw varies the flight. Noise is unseeded, and the world fixes the global origin.
-HOME_YAW_RAD=$(awk -v r="$RANDOM" 'BEGIN { printf "%.4f", r / 32767.0 * 6.2832 }')
+# Drawn here rather than inside the substitution below: bash reseeds RANDOM in a subshell
+YAW_DRAW=$RANDOM
+HOME_YAW_RAD=$(awk -v r="$YAW_DRAW" 'BEGIN { printf "%.4f", r / 32767.0 * 6.2832 }')
 export PX4_GZ_MODEL_POSE="0,0,0,0,0,$HOME_YAW_RAD"
 
 # Optical flow needs ground texture to track, see ADR-0003
@@ -114,8 +132,9 @@ until timeout 5 ros2 topic echo --once --qos-reliability best_effort \
   fi
 done
 
-echo "Starting the relay..."
-ros2 run quorum_injector relay_node &
+echo "Starting the relay with scenario $SCENARIO_NAME..."
+ros2 run quorum_injector relay_node \
+  --ros-args -p scenario_file:="$SCENARIO" -p seed:="$SEED" &
 RELAY_PID=$!
 
 # Everything downstream reads the twins, so a dead relay is a dead run
@@ -189,7 +208,7 @@ date: $(date --iso-8601=seconds)
 commit: $(git rev-parse --short HEAD)
 px4_version: $PX4_VERSION
 home_yaw_rad: $HOME_YAW_RAD
-relay: on
+scenario: $SCENARIO_NAME
 exit_code: $EXIT_CODE
 EOF
 
