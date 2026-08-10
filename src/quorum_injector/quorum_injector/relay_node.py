@@ -44,7 +44,7 @@ class RelayNode(Node):
         plan = attacks.plan_attack(scenario, default_rng(scenario.seed))
 
         self.get_logger().info(
-            f"{scenario.scenario_id}: {scenario.mode.value} at {plan.onset_s:.2f} s, "
+            f"{scenario.scenario_id}: {scenario.attack} at {plan.onset_s:.2f} s, "
             f"seed {scenario.seed}"
         )
         return plan

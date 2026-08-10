@@ -1,0 +1,8 @@
+scenario_id: ATK-002
+attack: gps_drift
+onset_s: 20.0
+onset_jitter_s: 2.0
+rate_mps: 1.0
+bearing_deg: 60.0
+ramp_s: 5.0
+seed: 1
