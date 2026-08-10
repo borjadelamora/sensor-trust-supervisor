@@ -1,0 +1,11 @@
+run: 20260810_square_ATK-003-gps-jump_s1
+mission: square
+model: gz_x500_flow
+world: baylands
+seed: 1
+date: 2026-08-10T16:51:07+02:00
+commit: 68eb409
+px4_version: v1.17.0
+home_yaw_rad: 3.2228
+scenario: ATK-003-gps-jump
+exit_code: 0

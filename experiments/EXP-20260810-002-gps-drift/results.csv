@@ -1,0 +1,15 @@
+metric,value,unit
+flight_duration,61.7,s
+drawn_onset,20.05,s
+onset_in_bag,18.06,s
+gps_messages_raw,1531,count
+gps_messages_twin,1532,count
+messages_identical_before_onset,491,count
+separation_at_last_fix,41.19,m
+max_separation_error_vs_predicted,0.028,m
+mean_separation_error_vs_predicted,0.026,m
+velocity_bias_after_ramp,1.0000,m/s
+velocity_bias_bearing,60.00,deg
+max_ground_speed_inconsistency,4.3e-07,m/s
+home_yaw,3.2228,rad
+exit_code,0,
