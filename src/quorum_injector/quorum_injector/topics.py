@@ -1,14 +1,17 @@
 from dataclasses import dataclass
 
 from px4_msgs.msg import SensorCombined, SensorGps, SensorOpticalFlow, VehicleOpticalFlowVel
+from sensor_msgs.msg import Image
 
 OUT_PREFIX = "/fmu/out/"
 TARGET_PREFIX = "/quorum/"
 
 
 def twin_name(source: str) -> str:
-    assert source.startswith(OUT_PREFIX), f"Topic '{source}' lacks required prefix '{OUT_PREFIX}'"
-    return TARGET_PREFIX + source.removeprefix(OUT_PREFIX)
+    assert not source.startswith(TARGET_PREFIX), (
+        f"Topic '{source}' already under prefix '{TARGET_PREFIX}'"
+    )
+    return TARGET_PREFIX + source.rsplit("/", 1)[-1]
 
 
 @dataclass(frozen=True)
@@ -27,4 +30,5 @@ def relayed_topics() -> tuple[MirroredTopic, ...]:
         MirroredTopic(SensorCombined, OUT_PREFIX + "sensor_combined"),
         MirroredTopic(SensorOpticalFlow, OUT_PREFIX + "sensor_optical_flow"),
         MirroredTopic(VehicleOpticalFlowVel, OUT_PREFIX + "vehicle_optical_flow_vel"),
+        MirroredTopic(Image, "/camera/flow_image"),
     )
