@@ -1,0 +1,17 @@
+metric,value,unit
+flight_duration,63.44,s
+drawn_onset,20.047,s
+delivered_onset,20.651,s
+gps_messages_raw,1534,count
+gps_messages_twin,1537,count
+fixes_identical_before_onset,401,count
+fixes_held,1133,count
+distinct_positions_after_onset,1,count
+held_fixes_with_nonzero_velocity,0,count
+held_fixes_with_nonzero_course,0,count
+max_separation,24.67,m
+separation_at_last_fix,14.20,m
+largest_px4_stamp_gap,4.17,s
+stale_stamps_ignored,3,count
+home_yaw,3.2228,rad
+exit_code,0,

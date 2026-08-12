@@ -1,0 +1,3 @@
+[INFO] [1786550364.455208027] [relay_node]: ATK-003 [gps]: GpsJump(magnitude_m=50.0, bearing_deg=60.0) at 20.05 s, seed 1
+[INFO] [1786550364.505471160] [relay_node]: onsets count from px4 stamp 1786550362.701 s
+[WARN] [1786550384.654807912] [relay_node]: corrupting the gps stream from 20.05 s

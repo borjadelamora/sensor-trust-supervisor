@@ -1,0 +1,12 @@
+run: 20260812_square_ATK-003-gps-jump_s1
+mission: square
+model: gz_x500_flow
+world: baylands
+seed: 1
+date: 2026-08-12T18:00:33+02:00
+commit: cc3eb2a
+px4_version: v1.17.0
+home_yaw_rad: 3.2228
+camera_gz_topic: /world/baylands/model/x500_flow_0/link/flow_link/sensor/flow_camera/image
+scenario: ATK-003-gps-jump
+exit_code: 0

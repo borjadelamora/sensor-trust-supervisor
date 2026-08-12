@@ -1,0 +1,5 @@
+[INFO] [1786550701.489080651] [relay_node]: ATK-006 [gps]: GpsDrift(rate_mps=1.0, bearing_deg=60.0, ramp_s=5.0) at 20.05 s, seed 1
+[INFO] [1786550701.489714419] [relay_node]: ATK-006 [camera]: CameraBlackout(intensity=0.0, duration_s=15.0) at 24.58 s, seed 1
+[INFO] [1786550701.561893445] [relay_node]: onsets count from px4 stamp 1786550699.820 s
+[WARN] [1786550723.121777879] [relay_node]: corrupting the gps stream from 20.05 s
+[WARN] [1786550728.135183081] [relay_node]: corrupting the camera stream from 24.58 s

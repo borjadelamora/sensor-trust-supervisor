@@ -1,0 +1,3 @@
+[INFO] [1786550145.435575797] [relay_node]: ATK-001 [gps]: GpsFreeze() at 20.05 s, seed 1
+[INFO] [1786550145.485882128] [relay_node]: onsets count from px4 stamp 1786550143.966 s
+[WARN] [1786550164.626626105] [relay_node]: corrupting the gps stream from 20.05 s

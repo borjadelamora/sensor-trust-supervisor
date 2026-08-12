@@ -1,0 +1,3 @@
+[INFO] [1786550589.701819938] [relay_node]: ATK-005 [camera]: CameraBlackout(intensity=0.0, duration_s=15.0) at 18.58 s, seed 1
+[INFO] [1786550589.768202022] [relay_node]: onsets count from px4 stamp 1786550588.121 s
+[WARN] [1786550607.975296117] [relay_node]: corrupting the camera stream from 18.58 s

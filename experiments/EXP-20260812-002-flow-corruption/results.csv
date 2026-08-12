@@ -1,0 +1,16 @@
+metric,value,unit
+flight_duration,66.69,s
+drawn_onset,21.802,s
+delivered_onset,24.467,s
+flow_messages_twin,2510,count
+messages_identical_before_onset,645,count
+messages_scaled,1861,count
+velocity_ratio_twin_over_raw,0.5000,
+corrupted_with_altered_flow_rate,0,count
+corrupted_with_altered_gyro_or_timestamp,0,count
+gps_fixes_altered,0,count
+camera_frames_altered,0,count
+largest_px4_stamp_gap,4.40,s
+stale_stamps_ignored,2,count
+home_yaw,3.2228,rad
+exit_code,0,
