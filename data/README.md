@@ -7,6 +7,10 @@ carries no attack.
 The bag payload (`*.db3`) is not tracked. A run is reproduced by checking out the commit in its
 manifest and rerunning the script with the same mission, scenario and seed.
 
+`relay.log` is what the injector printed: the attack it planned, the PX4 stamp it counted onsets
+from and the onset drawn for each channel. Every onset is relative to that stamp, so it is the
+file an experiment entry quotes them against. Runs recorded before 12 August predate it.
+
 Manifest fields:
 
 | Field | Meaning |

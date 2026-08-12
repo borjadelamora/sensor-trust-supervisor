@@ -6,7 +6,7 @@ twin with the same timestamp and the same field values, on a full square mission
 ## Result
 
 Relayed and direct are indistinguishable, so the relay can be treated as transparent when no
-attack is configured. Everything the monitors will read from Phase 3 onwards comes through it.
+attack is configured. Everything the monitors will read comes through it.
 
 ## Numbers
 
@@ -25,5 +25,5 @@ No raw message is missing from its twin, which is the property that matters.
 
 ## What I would change next time
 
-The comparison ran as a throwaway script. Phase 6 needs it in `tools/`, with the padding and
+The comparison ran as a throwaway script. It belongs in `tools/`, with the padding and
 NaN handling built in, because every battery run wants the same check.
