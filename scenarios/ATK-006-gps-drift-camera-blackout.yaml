@@ -1,0 +1,16 @@
+# GPS drifts, then the camera goes: flow is the channel left.
+scenario_id: ATK-006
+seed: 1
+gps:
+  attack: gps_drift
+  onset_s: 20.0
+  onset_jitter_s: 2.0
+  rate_mps: 1.0
+  bearing_deg: 60.0
+  ramp_s: 5.0
+camera:
+  attack: camera_blackout
+  onset_s: 26.0
+  onset_jitter_s: 2.0
+  intensity: 0.0
+  duration_s: 15.0

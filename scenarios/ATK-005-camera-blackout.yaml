@@ -1,0 +1,9 @@
+# Every frame black for 15 s.
+scenario_id: ATK-005
+seed: 1
+camera:
+  attack: camera_blackout
+  onset_s: 20.0
+  onset_jitter_s: 2.0
+  intensity: 0.0
+  duration_s: 15.0

@@ -12,7 +12,7 @@ Copy to `<experiment-id>/manifest.md` and fill in before the run.
 | Mission | |
 | Model / world | |
 | Attack | none (benign) / GPS freeze / GPS drift / GPS jump / flow corruption / camera blackout |
-| Attack onset | s after takeoff |
+| Attack onset | s after the relay's first px4 stamp |
 | Attack parameters | |
 | Repetitions | |
 | Metrics | |

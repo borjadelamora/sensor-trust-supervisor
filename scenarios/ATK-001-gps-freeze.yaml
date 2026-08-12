@@ -1,5 +1,7 @@
+# The fix stops moving while the IMU still reports motion.
 scenario_id: ATK-001
-attack: gps_freeze
-onset_s: 20.0
-onset_jitter_s: 2.0
 seed: 1
+gps:
+  attack: gps_freeze
+  onset_s: 20.0
+  onset_jitter_s: 2.0

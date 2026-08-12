@@ -1,7 +1,9 @@
+# The easy case: a 50 m step that no velocity accounts for.
 scenario_id: ATK-003
-attack: gps_jump
-onset_s: 20.0
-onset_jitter_s: 2.0
-magnitude_m: 50.0
-bearing_deg: 60.0
 seed: 1
+gps:
+  attack: gps_jump
+  onset_s: 20.0
+  onset_jitter_s: 2.0
+  magnitude_m: 50.0
+  bearing_deg: 60.0

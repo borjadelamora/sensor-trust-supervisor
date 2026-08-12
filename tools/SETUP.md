@@ -14,6 +14,7 @@ reasons in [ADR-0002](../docs/decisions/0002-dev-environment-and-px4-pin.md).
 | px4_msgs | tag `v1.17.0` |
 | Gazebo Sim | 8.14.0 (Harmonic) |
 | Micro XRCE-DDS Agent | v3.0.1 |
+| ros_gz bridge | `ros-humble-ros-gzharmonic` 0.244.12 |
 
 PX4 and px4_msgs must be on the *same* tag. If they drift apart the topics still tick, but
 fields can decode to the wrong values and nothing warns you.
@@ -157,6 +158,45 @@ param save
 
 Saved values beat the airframe file, which sets defaults rather than values, so this survives
 restarts. Reboot after saving: `SYS_HAS_GPS` is only read at boot.
+
+## The camera
+
+The flow camera is a Gazebo sensor. Its frames never become a uORB topic, so no amount of
+editing `dds_topics.yaml` will bring them over: the XRCE-DDS agent only carries what PX4
+publishes. They need a second bridge, from Gazebo transport straight into ROS 2.
+
+```bash
+sudo apt install -y ros-humble-ros-gzharmonic
+```
+
+The `gzharmonic` suffix is the whole point. `ros-humble-ros-gz-bridge` from `packages.ros.org`
+is the same software built against Fortress, and a Fortress bridge does not share a transport
+layer with a Harmonic simulator, so it connects to nothing and reports no error while doing it.
+The suffixed package comes from the osrfoundation repository, the same one Gazebo itself
+installs from.
+
+The topic name is scoped to the world and to the spawned model, in the form
+`/world/<world>/model/<model>/link/flow_link/sensor/flow_camera/image`, so it is not a constant
+and changes if either changes. Ask Gazebo for it while the sim is up:
+
+```bash
+gz topic -l | grep flow_camera
+```
+
+That lists the image topic and a `camera_info` beside it. Bridge the image to a short name:
+
+```bash
+GZ_TOPIC=$(gz topic -l | grep -m1 '/flow_camera/image$')
+ros2 run ros_gz_bridge parameter_bridge \
+  "$GZ_TOPIC@sensor_msgs/msg/Image[gz.msgs.Image" \
+  --ros-args -r "$GZ_TOPIC:=/camera/flow_image"
+```
+
+The `[` is a direction, Gazebo to ROS only, and the quotes keep bash from globbing it. After
+that `/camera/flow_image` carries what the SDF declares: 100 by 100 pixels at 50 Hz.
+
+`record_flight.sh` runs the lookup and the bridge itself on the flow airframe, so this section
+is for working by hand.
 
 ## Things that caught me out
 

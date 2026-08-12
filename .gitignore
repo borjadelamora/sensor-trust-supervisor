@@ -12,6 +12,8 @@ data/flakes.log
 __pycache__/
 *.py[cod]
 .venv/
+.pytest_cache/
+.ruff_cache/
 
 # Editor / OS
 .DS_Store

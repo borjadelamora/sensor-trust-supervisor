@@ -1,0 +1,8 @@
+# Flow reads half the true speed.
+scenario_id: ATK-004
+seed: 1
+flow:
+  attack: flow_corruption
+  onset_s: 20.0
+  onset_jitter_s: 2.0
+  scale: 0.5

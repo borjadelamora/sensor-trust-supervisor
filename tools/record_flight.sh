@@ -30,6 +30,10 @@ BAG_DIR="$REPO/data/$RUN"
 SIM_TIMEOUT_S=300
 FLIGHT_TIMEOUT_S=300
 
+# The flow camera reaches ROS through a second bridge, see SETUP.md
+CAMERA_TOPIC=/camera/flow_image
+CAMERA_TWIN=/quorum/flow_image
+
 # Exit status: 1 bad arguments, 2 stack never came up, 124 flight overran, else the node's.
 if [ ! -f "$MISSION_FILE" ]; then
   echo "No mission file at $MISSION_FILE"
@@ -51,14 +55,17 @@ RECORDER_PID=""
 PX4_PID=""
 AGENT_PID=""
 RELAY_PID=""
+BRIDGE_PID=""
 
 kill_stack() {
   pkill -9 -f ninja || true
   kill -9 "$PX4_PID" 2>/dev/null || true
   kill -9 "$AGENT_PID" 2>/dev/null || true
   kill -9 "$RELAY_PID" 2>/dev/null || true
+  kill -9 "$BRIDGE_PID" 2>/dev/null || true
   pkill -9 -f MicroXRCEAgent || true
   pkill -9 -f relay_node || true
+  pkill -9 -f parameter_bridge || true
   pkill -9 -f '[g]z sim' || true
   pkill -9 -f 'px4_sitl_default/bin/[p]x4' || true
 }
@@ -132,9 +139,44 @@ until timeout 5 ros2 topic echo --once --qos-reliability best_effort \
   fi
 done
 
+# PX4's uXRCE-DDS bridge carries uORB messages, so the camera image needs its own. The gz
+# topic is scoped to the world and the spawned model, so ask gz for it rather than guess.
+if [ "$MODEL" = gz_x500_flow ]; then
+  echo "Waiting for the flow camera topic..."
+  WAITED_S=0
+  until CAMERA_GZ_TOPIC=$(timeout 5 gz topic -l 2>/dev/null | grep -m1 '/flow_camera/image$'); do
+    sleep 1
+    WAITED_S=$((WAITED_S + 1))
+    if [ "$WAITED_S" -ge 30 ]; then
+      echo "No flow camera topic after ${WAITED_S}s"
+      exit 2
+    fi
+  done
+
+  echo "Bridging $CAMERA_GZ_TOPIC to $CAMERA_TOPIC"
+  ros2 run ros_gz_bridge parameter_bridge \
+    "$CAMERA_GZ_TOPIC@sensor_msgs/msg/Image[gz.msgs.Image" \
+    --ros-args -r "$CAMERA_GZ_TOPIC:=$CAMERA_TOPIC" &
+  BRIDGE_PID=$!
+
+  # A bridge that connects to nothing still advertises the topic
+  STARTED_S=$SECONDS
+  until timeout 5 ros2 topic echo --once --qos-reliability best_effort \
+    "$CAMERA_TOPIC" >/dev/null 2>&1; do
+    sleep 1
+    if [ "$((SECONDS - STARTED_S))" -ge 30 ]; then
+      echo "No frames on $CAMERA_TOPIC after 30s"
+      exit 2
+    fi
+  done
+fi
+
 echo "Starting the relay with scenario $SCENARIO_NAME..."
+
+# The drawn onsets are only in the relay's own output, and the bag folder does not exist yet
+RELAY_LOG=$(mktemp)
 ros2 run quorum_injector relay_node \
-  --ros-args -p scenario_file:="$SCENARIO" -p seed:="$SEED" &
+  --ros-args -p scenario_file:="$SCENARIO" -p seed:="$SEED" >"$RELAY_LOG" 2>&1 &
 RELAY_PID=$!
 
 # Everything downstream reads the twins, so a dead relay is a dead run
@@ -144,9 +186,23 @@ while ! ros2 topic list 2>/dev/null | grep -q '/quorum/vehicle_gps_position'; do
   WAITED_S=$((WAITED_S + 1))
   if [ "$WAITED_S" -ge 20 ]; then
     echo "No relayed topics after ${WAITED_S}s"
+    cat "$RELAY_LOG"
     exit 2
   fi
 done
+
+# The relay advertises every twin at startup, frames are what it can fail to carry
+if [ "$MODEL" = gz_x500_flow ]; then
+  STARTED_S=$SECONDS
+  until timeout 5 ros2 topic echo --once --qos-reliability best_effort \
+    "$CAMERA_TWIN" >/dev/null 2>&1; do
+    sleep 1
+    if [ "$((SECONDS - STARTED_S))" -ge 30 ]; then
+      echo "No frames on $CAMERA_TWIN after 30s"
+      exit 2
+    fi
+  done
+fi
 
 cd "$REPO"
 TOPICS=(
@@ -158,8 +214,6 @@ TOPICS=(
   /fmu/out/vehicle_land_detected
   /quorum/vehicle_gps_position
   /quorum/sensor_combined
-  /quorum/sensor_optical_flow
-  /quorum/vehicle_optical_flow_vel
 )
 
 # Only the flow airframe carries these
@@ -168,6 +222,10 @@ if [ "$MODEL" = gz_x500_flow ]; then
     /fmu/out/vehicle_optical_flow_vel
     /fmu/out/sensor_optical_flow
     /fmu/out/distance_sensor
+    /quorum/vehicle_optical_flow_vel
+    /quorum/sensor_optical_flow
+    "$CAMERA_TOPIC"
+    "$CAMERA_TWIN"
   )
 fi
 
@@ -208,9 +266,13 @@ date: $(date --iso-8601=seconds)
 commit: $(git rev-parse --short HEAD)
 px4_version: $PX4_VERSION
 home_yaw_rad: $HOME_YAW_RAD
+camera_gz_topic: ${CAMERA_GZ_TOPIC:-none}
 scenario: $SCENARIO_NAME
 exit_code: $EXIT_CODE
 EOF
 
+mv "$RELAY_LOG" "$BAG_DIR/relay.log"
+
 echo "Finished $RUN with exit code $EXIT_CODE"
+sed 's/.*\] //' "$BAG_DIR/relay.log"
 exit "$EXIT_CODE"

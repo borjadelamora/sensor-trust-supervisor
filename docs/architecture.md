@@ -1,7 +1,7 @@
 # Architecture
 
-What the system looks like so far. This is a sketch: only the offboard flight node exists at
-the moment and the supervision side is still a plan. It grows as things get built.
+What the system looks like so far. This is a sketch: the offboard flight node and the attack
+injector exist, and the supervision side is still a plan. It grows as things get built.
 
 ## Tiers
 
@@ -11,9 +11,13 @@ the moment and the supervision side is still a plan. It grows as things get buil
      v
   PX4 SITL          EKF2 estimator, flight modes, offboard control
      |
-     |              uORB topics bridged to ROS 2 by the Micro XRCE-DDS agent
+     |              uORB topics bridged to ROS 2 by the Micro XRCE-DDS agent,
+     |              camera frames by a second bridge out of Gazebo
      v
   ROS 2 Humble      quorum_offboard: reads a mission file and flies it
+     |              quorum_injector: relays the sensor topics, corrupting them on demand
+     v
+  /quorum/*         what the supervision layer reads
                     (monitors, arbiter and behaviour tree come later)
 ```
 
@@ -49,6 +53,39 @@ The `x500_flow` airframe adds three more, recorded since the flow assessment:
 None of those three reach ROS 2 without editing PX4's bridge topic list, and flow only works
 over textured ground. Both are covered in [tools/SETUP.md](../tools/SETUP.md) and
 [ADR-0003](decisions/0003-textured-world-for-optical-flow.md).
+
+The camera is a Gazebo sensor and reaches ROS 2 through a bridge of its own, `ros_gz_bridge`
+alongside the XRCE-DDS agent:
+
+| Topic | Rate | Carries |
+|---|---|---|
+| `/camera/flow_image` | 45 Hz | 100×100 `rgb8` frames, straight out of Gazebo |
+
+## The relay
+
+Everything the supervision layer reads arrives on a `/quorum/*` twin. `quorum_injector`
+subscribes to each source, applies whatever the scenario file asks of it, and republishes under
+the new name. Given no scenario it republishes untouched.
+
+| Source | Twin |
+|---|---|
+| `/fmu/out/vehicle_gps_position` | `/quorum/vehicle_gps_position` |
+| `/fmu/out/sensor_combined` | `/quorum/sensor_combined` |
+| `/fmu/out/sensor_optical_flow` | `/quorum/sensor_optical_flow` |
+| `/fmu/out/vehicle_optical_flow_vel` | `/quorum/vehicle_optical_flow_vel` |
+| `/camera/flow_image` | `/quorum/flow_image` |
+
+PX4 navigates on the sources, and the twins exist for the supervision layer alone. That keeps
+the autopilot as it ships and every run reproducible from a seed, and it makes the reach of an
+attack precise: it changes what the supervision layer believes, and arrives at the vehicle
+through whatever navigates on the twins. Currently the mission flies from the sources, so an
+attacked flight follows the same square as a clean one.
+
+The IMU is the reference the other two channels get checked against, so `sensor_combined` is
+relayed as it comes and v1 trusts it.
+
+Attack onsets are counted in PX4's clock, from the first stamp the relay sees, so all three
+channels are timed against one reference.
 
 ## Frames
 
