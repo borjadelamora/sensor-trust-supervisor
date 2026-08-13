@@ -1,8 +1,13 @@
-# Flow reads half the true speed.
+# Flow reads half the true speed, reached over 10 s rather than at once.
 scenario_id: ATK-004
 seed: 1
 flow:
   attack: flow_corruption
   onset_s: 20.0
   onset_jitter_s: 2.0
+  duration_s: null
   scale: 0.5
+  profile:
+    shape: linear
+    rise_s: 10.0
+    ease_s: 2.0

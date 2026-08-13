@@ -3,13 +3,29 @@ from typing import Any
 
 from numpy.random import Generator
 
-from quorum_injector.scenario import Attack, ChannelSpec, NoAttack, Scenario
+from quorum_injector.scenario import Attack, Episode, NoAttack, Scenario
+
+
+@dataclass(frozen=True)
+class PlannedEpisode:
+    attack: Attack
+    onset_s: float
+    duration_s: float | None
+
+    def contains(self, elapsed_s: float) -> bool:
+        if elapsed_s < self.onset_s:
+            return False
+
+        return self.duration_s is None or elapsed_s < self.onset_s + self.duration_s
 
 
 @dataclass(frozen=True)
 class ChannelPlan:
-    attack: Attack
-    onset_s: float
+    episodes: tuple[PlannedEpisode, ...]
+
+    # Jitter can draw two declared episodes into each other, and the earlier one keeps the channel
+    def active(self, elapsed_s: float) -> PlannedEpisode | None:
+        return next((episode for episode in self.episodes if episode.contains(elapsed_s)), None)
 
 
 @dataclass(frozen=True)
@@ -25,30 +41,27 @@ class Relayed:
     corrupted: bool
 
 
-BENIGN_PLAN = ChannelPlan(NoAttack(), 0.0)
+BENIGN_PLAN = ChannelPlan((PlannedEpisode(NoAttack(), 0.0, None),))
 NO_ATTACK = AttackPlan(BENIGN_PLAN, BENIGN_PLAN, BENIGN_PLAN)
 
 
-def _draw_onset(spec: ChannelSpec, rng: Generator) -> float:
-    return spec.onset_s + rng.uniform(-spec.onset_jitter_s, spec.onset_jitter_s)
+def _draw_onset(episode: Episode, rng: Generator) -> float:
+    return episode.onset_s + rng.uniform(-episode.onset_jitter_s, episode.onset_jitter_s)
+
+
+def _plan_channel(episodes: tuple[Episode, ...], rng: Generator) -> ChannelPlan:
+    return ChannelPlan(
+        tuple(
+            PlannedEpisode(episode.attack, _draw_onset(episode, rng), episode.duration_s)
+            for episode in episodes
+        )
+    )
 
 
 def plan_attack(scenario: Scenario, rng: Generator) -> AttackPlan:
     # Benign channels draw too, so one channel's onset never depends on the others.
-    gps_onset = _draw_onset(scenario.gps, rng)
-    flow_onset = _draw_onset(scenario.flow, rng)
-    camera_onset = _draw_onset(scenario.camera, rng)
-
     return AttackPlan(
-        gps=ChannelPlan(attack=scenario.gps.attack, onset_s=gps_onset),
-        flow=ChannelPlan(attack=scenario.flow.attack, onset_s=flow_onset),
-        camera=ChannelPlan(attack=scenario.camera.attack, onset_s=camera_onset),
+        gps=_plan_channel(scenario.gps, rng),
+        flow=_plan_channel(scenario.flow, rng),
+        camera=_plan_channel(scenario.camera, rng),
     )
-
-
-def is_active(elapsed_s: float, onset_s: float) -> bool:
-    return elapsed_s >= onset_s
-
-
-def is_within(elapsed_s: float, onset_s: float, duration_s: float) -> bool:
-    return onset_s <= elapsed_s < onset_s + duration_s

@@ -3,29 +3,49 @@ import copy
 
 from sensor_msgs.msg import Image
 
-from quorum_injector.plan import ChannelPlan, Relayed, is_within
-from quorum_injector.scenario import CameraBlackout, NoAttack
+from quorum_injector.plan import ChannelPlan, Relayed
+from quorum_injector.scenario import CameraBlackout, CameraFreeze, NoAttack
 
 MAX_LEVEL = 255
+LEVELS = 256
 
 
-def apply(msg: Image, plan: ChannelPlan, elapsed_s: float) -> Relayed:
-    if isinstance(plan.attack, NoAttack):
+def apply(msg: Image, held: Image | None, plan: ChannelPlan, elapsed_s: float) -> Relayed:
+    episode = plan.active(elapsed_s)
+
+    if episode is None or isinstance(episode.attack, NoAttack):
         return Relayed(msg, corrupted=False)
 
-    match plan.attack:
+    match episode.attack:
         case CameraBlackout() as blackout:
-            if not is_within(elapsed_s, plan.onset_s, blackout.duration_s):
+            progress = blackout.profile.evaluate(elapsed_s - episode.onset_s)
+            level = round(blackout.intensity * MAX_LEVEL)
+
+            return Relayed(dim(msg, level, progress.fraction), corrupted=True)
+        case CameraFreeze():
+            if held is None:
                 return Relayed(msg, corrupted=False)
 
-            return Relayed(flood(msg, round(blackout.intensity * MAX_LEVEL)), corrupted=True)
+            return Relayed(hold(msg, held), corrupted=True)
         case _:
-            raise AssertionError(f"no corruption for {plan.attack}")
+            raise AssertionError(f"no corruption for {episode.attack}")
 
 
-def flood(msg: Image, level: int) -> Image:
-    flooded_msg = copy.deepcopy(msg)
+def dim(msg: Image, level: int, fraction: float) -> Image:
+    dimmed_msg = copy.deepcopy(msg)
 
-    flooded_msg.data = array.array("B", bytes([level]) * len(flooded_msg.data))
+    # A byte at a time is too slow for 45 Hz, so every level is mapped once and applied in C
+    mapping = bytes(
+        min(MAX_LEVEL, max(0, round(value + (level - value) * fraction))) for value in range(LEVELS)
+    )
+    dimmed_msg.data = array.array("B", bytes(msg.data).translate(mapping))
 
-    return flooded_msg
+    return dimmed_msg
+
+
+def hold(msg: Image, held: Image) -> Image:
+    held_msg = copy.deepcopy(msg)
+
+    held_msg.data = array.array("B", bytes(held.data))
+
+    return held_msg

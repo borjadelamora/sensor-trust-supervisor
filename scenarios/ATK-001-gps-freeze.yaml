@@ -5,3 +5,4 @@ gps:
   attack: gps_freeze
   onset_s: 20.0
   onset_jitter_s: 2.0
+  duration_s: null

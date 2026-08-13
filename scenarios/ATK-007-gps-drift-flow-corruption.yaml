@@ -1,0 +1,24 @@
+# Two of the three velocity estimates lie at once, so the majority vote has no majority.
+scenario_id: ATK-007
+seed: 1
+gps:
+  attack: gps_spoof
+  onset_s: 20.0
+  onset_jitter_s: 2.0
+  duration_s: null
+  offset_m: 47.0
+  bearing_deg: 60.0
+  profile:
+    shape: linear
+    rise_s: 49.5
+    ease_s: 5.0
+flow:
+  attack: flow_corruption
+  onset_s: 26.0
+  onset_jitter_s: 2.0
+  duration_s: null
+  scale: 0.7
+  profile:
+    shape: linear
+    rise_s: 10.0
+    ease_s: 2.0

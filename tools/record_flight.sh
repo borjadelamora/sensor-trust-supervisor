@@ -175,8 +175,13 @@ echo "Starting the relay with scenario $SCENARIO_NAME..."
 
 # The drawn onsets are only in the relay's own output, and the bag folder does not exist yet
 RELAY_LOG=$(mktemp)
-ros2 run quorum_injector relay_node \
-  --ros-args -p scenario_file:="$SCENARIO" -p seed:="$SEED" >"$RELAY_LOG" 2>&1 &
+# An empty scenario_file override is not a parameter rule rcl will parse, so leave it out
+RELAY_ARGS=(--ros-args -p seed:="$SEED")
+if [ -n "$SCENARIO" ]; then
+  RELAY_ARGS+=(-p scenario_file:="$SCENARIO")
+fi
+
+ros2 run quorum_injector relay_node "${RELAY_ARGS[@]}" >"$RELAY_LOG" 2>&1 &
 RELAY_PID=$!
 
 # Everything downstream reads the twins, so a dead relay is a dead run

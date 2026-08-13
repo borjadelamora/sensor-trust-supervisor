@@ -2,8 +2,11 @@
 scenario_id: ATK-003
 seed: 1
 gps:
-  attack: gps_jump
+  attack: gps_spoof
   onset_s: 20.0
   onset_jitter_s: 2.0
-  magnitude_m: 50.0
+  duration_s: null
+  offset_m: 50.0
   bearing_deg: 60.0
+  profile:
+    shape: step

@@ -1,0 +1,17 @@
+# Spoof, then nothing, then a freeze: the gap is what a recovery to trusted needs.
+scenario_id: ATK-009
+seed: 1
+gps:
+  - attack: gps_spoof
+    onset_s: 15.0
+    onset_jitter_s: 2.0
+    duration_s: 12.0
+    offset_m: 20.0
+    bearing_deg: 60.0
+    profile:
+      shape: sigmoid
+      rise_s: 12.0
+  - attack: gps_freeze
+    onset_s: 40.0
+    onset_jitter_s: 2.0
+    duration_s: 10.0

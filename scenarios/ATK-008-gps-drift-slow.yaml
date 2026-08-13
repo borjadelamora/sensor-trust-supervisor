@@ -1,0 +1,14 @@
+# The other end of the rate sweep: 0.3 m/s, pre-registered before any monitor exists.
+scenario_id: ATK-008
+seed: 1
+gps:
+  attack: gps_spoof
+  onset_s: 20.0
+  onset_jitter_s: 2.0
+  duration_s: null
+  offset_m: 14.0
+  bearing_deg: 60.0
+  profile:
+    shape: linear
+    rise_s: 49.2
+    ease_s: 5.0

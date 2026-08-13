@@ -5,7 +5,7 @@ from typing import Any
 
 import rclpy
 from numpy.random import default_rng
-from px4_msgs.msg import SensorGps, VehicleOpticalFlowVel
+from px4_msgs.msg import SensorGps, SensorOpticalFlow, VehicleOpticalFlowVel
 from rclpy import qos
 from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
@@ -24,10 +24,12 @@ class RelayNode(Node):
 
         self._px4_clock = clock.Clock()
         self._held_fix: SensorGps | None = None
+        self._held_frame: Image | None = None
         self._announced: set[str] = set()
         self._handlers: dict[type, Handler] = {
             SensorGps: self._relay_gps,
             VehicleOpticalFlowVel: self._relay_flow,
+            SensorOpticalFlow: self._relay_raw_flow,
             Image: self._relay_image,
         }
         scenario_file = self.declare_parameter("scenario_file", "").value
@@ -47,14 +49,14 @@ class RelayNode(Node):
         attack_plan = plan.plan_attack(scenario, default_rng(scenario.seed))
 
         for channel in CHANNELS:
-            channel_plan = getattr(attack_plan, channel)
-            if isinstance(channel_plan.attack, NoAttack):
-                continue
+            for episode in getattr(attack_plan, channel).episodes:
+                if isinstance(episode.attack, NoAttack):
+                    continue
 
-            self.get_logger().info(
-                f"{scenario.scenario_id} [{channel}]: {channel_plan.attack} "
-                f"at {channel_plan.onset_s:.2f} s, seed {scenario.seed}"
-            )
+                self.get_logger().info(
+                    f"{scenario.scenario_id} [{channel}]: {episode.attack} "
+                    f"at {episode.onset_s:.2f} s for {episode.duration_s}, seed {scenario.seed}"
+                )
 
         return attack_plan
 
@@ -101,34 +103,44 @@ class RelayNode(Node):
 
         if not relayed.corrupted:
             self._held_fix = msg
-        else:
-            self._announce("gps", self._plan.gps.onset_s)
 
-        publisher.publish(relayed.msg)
+        self._publish(relayed, "gps", publisher, elapsed_s)
 
     def _relay_flow(
         self, msg: VehicleOpticalFlowVel, publisher: Publisher, elapsed_s: float
     ) -> None:
-        relayed = flow.apply(msg, self._plan.flow, elapsed_s)
+        relayed = flow.apply_velocity(msg, self._plan.flow, self._plan.camera, elapsed_s)
 
-        if relayed.corrupted:
-            self._announce("flow", self._plan.flow.onset_s)
+        self._publish(relayed, "flow", publisher, elapsed_s)
 
-        publisher.publish(relayed.msg)
+    def _relay_raw_flow(
+        self, msg: SensorOpticalFlow, publisher: Publisher, elapsed_s: float
+    ) -> None:
+        relayed = flow.apply_raw(msg, self._plan.flow, self._plan.camera, elapsed_s)
+
+        self._publish(relayed, "flow", publisher, elapsed_s)
 
     def _relay_image(self, msg: Image, publisher: Publisher, elapsed_s: float) -> None:
-        relayed = camera.apply(msg, self._plan.camera, elapsed_s)
+        relayed = camera.apply(msg, self._held_frame, self._plan.camera, elapsed_s)
 
+        if not relayed.corrupted:
+            self._held_frame = msg
+
+        self._publish(relayed, "camera", publisher, elapsed_s)
+
+    def _publish(
+        self, relayed: plan.Relayed, channel: str, publisher: Publisher, elapsed_s: float
+    ) -> None:
         if relayed.corrupted:
-            self._announce("camera", self._plan.camera.onset_s)
+            self._announce(channel, elapsed_s)
 
         publisher.publish(relayed.msg)
 
-    def _announce(self, channel: str, onset_s: float) -> None:
+    def _announce(self, channel: str, elapsed_s: float) -> None:
         if channel in self._announced:
             return
 
-        self.get_logger().warning(f"corrupting the {channel} stream from {onset_s:.2f} s")
+        self.get_logger().warning(f"corrupting the {channel} stream from {elapsed_s:.2f} s")
         self._announced.add(channel)
 
 

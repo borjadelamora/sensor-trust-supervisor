@@ -5,8 +5,8 @@ from typing import NamedTuple
 
 from px4_msgs.msg import SensorGps
 
-from quorum_injector.plan import ChannelPlan, Relayed, is_active
-from quorum_injector.scenario import GpsDrift, GpsFreeze, GpsJump, NoAttack
+from quorum_injector.plan import ChannelPlan, Relayed
+from quorum_injector.scenario import GpsFreeze, GpsSpoof, NoAttack
 
 
 @dataclass(frozen=True)
@@ -27,23 +27,19 @@ EARTH_RADIUS_M = 6_371_000.0
 
 
 def apply(msg: SensorGps, held: SensorGps, plan: ChannelPlan, elapsed_s: float) -> Relayed:
-    if isinstance(plan.attack, NoAttack):
+    episode = plan.active(elapsed_s)
+
+    if episode is None or isinstance(episode.attack, NoAttack):
         return Relayed(msg, corrupted=False)
 
-    if not is_active(elapsed_s, plan.onset_s):
-        return Relayed(msg, corrupted=False)
-
-    match plan.attack:
+    match episode.attack:
         case GpsFreeze():
             return Relayed(freeze_gps(msg, held), corrupted=True)
-        case GpsJump() as jump:
-            spoof_state = calculate_spoof_state(jump.magnitude_m, 0.0, jump.bearing_deg)
-            return Relayed(shift_gps(msg, spoof_state), corrupted=True)
-        case GpsDrift() as drift:
-            spoof_state = calculate_spoof_drift(drift, elapsed_s - plan.onset_s)
+        case GpsSpoof() as spoof:
+            spoof_state = calculate_spoof_state(spoof, elapsed_s - episode.onset_s)
             return Relayed(shift_gps(msg, spoof_state), corrupted=True)
         case _:
-            raise AssertionError(f"no corruption for {plan.attack}")
+            raise AssertionError(f"no corruption for {episode.attack}")
 
 
 def freeze_gps(msg: SensorGps, held: SensorGps) -> SensorGps:
@@ -97,10 +93,13 @@ def shift_gps(msg: SensorGps, state: SpoofState) -> SensorGps:
     return shifted_msg
 
 
-def calculate_spoof_state(
-    offset_m: float, velocity_bias_mps: float, bearing_deg: float
-) -> SpoofState:
-    bearing_rad = math.radians(bearing_deg)
+def calculate_spoof_state(spoof: GpsSpoof, since_onset_s: float) -> SpoofState:
+    # The bias is the profile's own derivative, so the fix moves at the rate it claims to
+    progress = spoof.profile.evaluate(since_onset_s)
+    offset_m = spoof.offset_m * progress.fraction
+    velocity_bias_mps = spoof.offset_m * progress.rate_per_s
+
+    bearing_rad = math.radians(spoof.bearing_deg)
     north_unit = math.cos(bearing_rad)
     east_unit = math.sin(bearing_rad)
 
@@ -110,14 +109,3 @@ def calculate_spoof_state(
         bias_north_mps=velocity_bias_mps * north_unit,
         bias_east_mps=velocity_bias_mps * east_unit,
     )
-
-
-def calculate_spoof_drift(drift: GpsDrift, since_onset_s: float) -> SpoofState:
-    if since_onset_s < drift.ramp_s:
-        offset_m = 0.5 * (drift.rate_mps / drift.ramp_s) * (since_onset_s * since_onset_s)
-        velocity_bias_mps = (drift.rate_mps / drift.ramp_s) * since_onset_s
-    else:
-        offset_m = drift.rate_mps * (since_onset_s - drift.ramp_s / 2)
-        velocity_bias_mps = drift.rate_mps
-
-    return calculate_spoof_state(offset_m, velocity_bias_mps, drift.bearing_deg)
