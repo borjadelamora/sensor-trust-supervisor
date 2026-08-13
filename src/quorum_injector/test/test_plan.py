@@ -1,35 +1,54 @@
 from numpy.random import default_rng
-from quorum_injector.plan import is_active, is_within, plan_attack
+from quorum_injector.plan import ChannelPlan, PlannedEpisode, plan_attack
+from quorum_injector.profile import Step
 from quorum_injector.scenario import (
     BENIGN,
     CameraBlackout,
-    ChannelSpec,
+    Episode,
     GpsFreeze,
     NoAttack,
     Scenario,
 )
 
 ONSET_S = 20.0
-FREEZE = ChannelSpec(attack=GpsFreeze(), onset_s=ONSET_S, onset_jitter_s=2.0)
-BLACKOUT = ChannelSpec(
-    attack=CameraBlackout(intensity=0.0, duration_s=10.0), onset_s=26.0, onset_jitter_s=2.0
+DURATION_S = 10.0
+FREEZE = (Episode(GpsFreeze(), onset_s=ONSET_S, onset_jitter_s=2.0, duration_s=None),)
+BLACKOUT = (
+    Episode(
+        CameraBlackout(intensity=0.0, profile=Step()),
+        onset_s=26.0,
+        onset_jitter_s=2.0,
+        duration_s=DURATION_S,
+    ),
 )
 
+OPEN_ENDED = ChannelPlan((PlannedEpisode(GpsFreeze(), ONSET_S, None),))
+WINDOWED = ChannelPlan((PlannedEpisode(GpsFreeze(), ONSET_S, DURATION_S),))
 
-def make_scenario(seed: int = 7, **channels: ChannelSpec) -> Scenario:
+
+def make_scenario(seed: int = 7, **channels: tuple[Episode, ...]) -> Scenario:
     return Scenario(scenario_id="ATK-001", seed=seed, **channels)
 
 
 def test_the_onset_is_inclusive():
-    assert not is_active(ONSET_S - 0.1, ONSET_S)
-    assert is_active(ONSET_S, ONSET_S)
+    assert OPEN_ENDED.active(ONSET_S - 0.1) is None
+    assert OPEN_ENDED.active(ONSET_S) is not None
 
 
-# The window is half-open, so a blackout of 10 s corrupts 10 s of frames and not one more.
+# The window is half-open, so an episode of 10 s corrupts 10 s of messages and not one more.
 def test_the_window_excludes_its_end():
-    assert not is_within(ONSET_S - 0.1, ONSET_S, 10.0)
-    assert is_within(ONSET_S, ONSET_S, 10.0)
-    assert not is_within(ONSET_S + 10.0, ONSET_S, 10.0)
+    assert WINDOWED.active(ONSET_S) is not None
+    assert WINDOWED.active(ONSET_S + DURATION_S) is None
+    assert OPEN_ENDED.active(ONSET_S + 10_000.0) is not None
+
+
+# The gap between two episodes is what a recovery to trusted needs, so it has to be quiet.
+def test_the_gap_between_episodes_is_clean():
+    plan = ChannelPlan(WINDOWED.episodes + (PlannedEpisode(GpsFreeze(), 40.0, DURATION_S),))
+
+    assert plan.active(ONSET_S).onset_s == ONSET_S
+    assert plan.active(35.0) is None
+    assert plan.active(41.0).onset_s == 40.0
 
 
 def test_the_same_seed_plans_the_same_onset():
@@ -51,7 +70,7 @@ def test_adding_a_camera_attack_leaves_the_gps_onset_alone():
     dual_plan = plan_attack(dual, default_rng(dual.seed))
 
     assert dual_plan.gps == single_plan.gps
-    assert dual_plan.camera.onset_s != BLACKOUT.onset_s
+    assert dual_plan.camera.episodes[0].onset_s != BLACKOUT[0].onset_s
 
 
 def test_an_unattacked_channel_plans_no_attack():
@@ -59,5 +78,5 @@ def test_an_unattacked_channel_plans_no_attack():
 
     planned = plan_attack(scenario, default_rng(scenario.seed))
 
-    assert isinstance(planned.flow.attack, NoAttack)
-    assert planned.flow.onset_s == BENIGN.onset_s
+    assert isinstance(planned.flow.episodes[0].attack, NoAttack)
+    assert planned.flow.episodes[0].onset_s == BENIGN[0].onset_s

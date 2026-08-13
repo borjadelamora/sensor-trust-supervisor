@@ -4,31 +4,41 @@ from typing import Any
 
 import pytest
 import yaml
+from quorum_injector.profile import Linear, Step
 from quorum_injector.scenario import (
     BENIGN,
     CameraBlackout,
-    GpsDrift,
     GpsFreeze,
-    GpsJump,
+    GpsSpoof,
     ScenarioError,
     load_scenario,
 )
 
 SCENARIOS = Path(__file__).parents[3] / "scenarios"
 
-FREEZE = {"attack": "gps_freeze", "onset_s": 20.0, "onset_jitter_s": 2.0}
+LINEAR = {"shape": "linear", "rise_s": 49.5, "ease_s": 5.0}
 
-DRIFT = FREEZE | {"attack": "gps_drift", "rate_mps": 1.0, "bearing_deg": 60.0, "ramp_s": 5.0}
+FREEZE = {"attack": "gps_freeze", "onset_s": 20.0, "onset_jitter_s": 2.0, "duration_s": None}
 
-JUMP = FREEZE | {"attack": "gps_jump", "magnitude_m": 50.0, "bearing_deg": 60.0}
+DRIFT = FREEZE | {
+    "attack": "gps_spoof",
+    "offset_m": 47.0,
+    "bearing_deg": 60.0,
+    "profile": LINEAR,
+}
+
+JUMP = DRIFT | {"offset_m": 50.0, "profile": {"shape": "step"}}
 
 BLACKOUT = {
     "attack": "camera_blackout",
     "onset_s": 26.0,
     "onset_jitter_s": 2.0,
-    "intensity": 0.0,
     "duration_s": 10.0,
+    "intensity": 0.0,
+    "profile": {"shape": "step"},
 }
+
+DRIFT_ATTACK = GpsSpoof(offset_m=47.0, bearing_deg=60.0, profile=Linear(rise_s=49.5, ease_s=5.0))
 
 
 def scenario_fields(**channels: dict[str, Any]) -> dict[str, Any]:
@@ -45,22 +55,22 @@ def test_loads_a_valid_scenario(tmp_path):
     scenario = load_scenario(write_scenario(tmp_path, scenario_fields(gps=FREEZE)))
 
     assert scenario.scenario_id == "ATK-001"
-    assert scenario.gps.attack == GpsFreeze()
-    assert scenario.gps.onset_s == 20.0
+    assert scenario.gps[0].attack == GpsFreeze()
+    assert scenario.gps[0].onset_s == 20.0
     assert scenario.seed == 7
 
 
 @pytest.mark.parametrize(
     ("block", "attack"),
     [
-        (DRIFT, GpsDrift(rate_mps=1.0, bearing_deg=60.0, ramp_s=5.0)),
-        (JUMP, GpsJump(magnitude_m=50.0, bearing_deg=60.0)),
+        (DRIFT, DRIFT_ATTACK),
+        (JUMP, GpsSpoof(offset_m=50.0, bearing_deg=60.0, profile=Step())),
     ],
 )
 def test_loads_the_attack_parameters(tmp_path, block, attack):
     scenario = load_scenario(write_scenario(tmp_path, scenario_fields(gps=block)))
 
-    assert scenario.gps.attack == attack
+    assert scenario.gps[0].attack == attack
 
 
 # The channels are independent, so an attack on one says nothing about the others.
@@ -69,9 +79,19 @@ def test_each_channel_carries_its_own_attack(tmp_path):
 
     scenario = load_scenario(write_scenario(tmp_path, fields))
 
-    assert scenario.gps.attack == GpsDrift(rate_mps=1.0, bearing_deg=60.0, ramp_s=5.0)
-    assert scenario.camera.attack == CameraBlackout(intensity=0.0, duration_s=10.0)
-    assert scenario.camera.onset_s == 26.0
+    assert scenario.gps[0].attack == DRIFT_ATTACK
+    assert scenario.camera[0].attack == CameraBlackout(intensity=0.0, profile=Step())
+    assert scenario.camera[0].onset_s == 26.0
+
+
+# A channel written as a list is several episodes spaced across one flight.
+def test_a_channel_carries_several_episodes(tmp_path):
+    later = FREEZE | {"onset_s": 40.0, "duration_s": 10.0}
+
+    scenario = load_scenario(write_scenario(tmp_path, scenario_fields(gps=[DRIFT, later])))
+
+    assert [episode.attack for episode in scenario.gps] == [DRIFT_ATTACK, GpsFreeze()]
+    assert scenario.gps[1].duration_s == 10.0
 
 
 def test_an_absent_channel_is_benign(tmp_path):
@@ -91,7 +111,7 @@ def test_scenario_is_frozen(tmp_path):
     scenario = load_scenario(write_scenario(tmp_path, scenario_fields(gps=FREEZE)))
 
     with pytest.raises(dataclasses.FrozenInstanceError):
-        scenario.gps.onset_s = 1.0
+        scenario.gps[0].onset_s = 1.0
 
 
 def test_missing_key_is_rejected(tmp_path):
@@ -112,10 +132,24 @@ def test_missing_timing_key_is_rejected(tmp_path):
 
 def test_missing_attack_parameter_is_rejected(tmp_path):
     block = dict(DRIFT)
-    del block["ramp_s"]
+    del block["bearing_deg"]
 
-    with pytest.raises(ScenarioError, match="gps: missing ramp_s"):
+    with pytest.raises(ScenarioError, match="gps: missing bearing_deg"):
         load_scenario(write_scenario(tmp_path, scenario_fields(gps=block)))
+
+
+def test_missing_profile_parameter_is_rejected(tmp_path):
+    fields = scenario_fields(gps=DRIFT | {"profile": {"shape": "linear", "rise_s": 49.5}})
+
+    with pytest.raises(ScenarioError, match="gps: missing ease_s"):
+        load_scenario(write_scenario(tmp_path, fields))
+
+
+def test_unknown_profile_shape_is_rejected(tmp_path):
+    fields = scenario_fields(gps=DRIFT | {"profile": {"shape": "sigmoud", "rise_s": 40.0}})
+
+    with pytest.raises(ScenarioError, match="not a known profile shape"):
+        load_scenario(write_scenario(tmp_path, fields))
 
 
 def test_unknown_key_is_rejected(tmp_path):
@@ -133,9 +167,9 @@ def test_unknown_channel_is_rejected(tmp_path):
 
 
 def test_another_attacks_parameter_is_rejected(tmp_path):
-    fields = scenario_fields(gps=JUMP | {"ramp_s": 5.0})
+    fields = scenario_fields(gps=JUMP | {"intensity": 0.5})
 
-    with pytest.raises(ScenarioError, match="gps_jump does not take ramp_s"):
+    with pytest.raises(ScenarioError, match="gps_spoof does not take intensity"):
         load_scenario(write_scenario(tmp_path, fields))
 
 
@@ -168,11 +202,11 @@ def test_jitter_wider_than_the_onset_is_rejected(tmp_path):
         load_scenario(write_scenario(tmp_path, fields))
 
 
-# A zero ramp steps the velocity at onset, which is what the drift is shaped to avoid.
-def test_an_instant_ramp_is_rejected(tmp_path):
-    fields = scenario_fields(gps=DRIFT | {"ramp_s": 0.0})
+# A zero ease steps the velocity at onset, which is what the rise is shaped to avoid.
+def test_an_instant_ease_is_rejected(tmp_path):
+    fields = scenario_fields(gps=DRIFT | {"profile": LINEAR | {"ease_s": 0.0}})
 
-    with pytest.raises(ScenarioError, match="ramp_s is 0.0, it must be positive"):
+    with pytest.raises(ScenarioError, match="ease_s is 0.0, it must be positive"):
         load_scenario(write_scenario(tmp_path, fields))
 
 
