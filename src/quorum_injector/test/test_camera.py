@@ -4,14 +4,14 @@ import pytest
 from quorum_injector.camera import apply
 from quorum_injector.plan import ChannelPlan, PlannedEpisode
 from quorum_injector.profile import Linear, Step
-from quorum_injector.scenario import CameraBlackout, CameraFreeze
+from quorum_injector.scenario import CameraBlackout, CameraDazzle, CameraFreeze
 from sensor_msgs.msg import Image
 
 ONSET_S = 20.0
 DURATION_S = 10.0
 FRAME_BYTES = 30_000
 BLACKOUT = ChannelPlan(
-    (PlannedEpisode(CameraBlackout(intensity=0.0, profile=Step()), ONSET_S, DURATION_S),)
+    (PlannedEpisode(CameraBlackout(intensity=1.0, profile=Step()), ONSET_S, DURATION_S),)
 )
 FROZEN = ChannelPlan((PlannedEpisode(CameraFreeze(), ONSET_S, DURATION_S),))
 
@@ -36,11 +36,18 @@ def test_frames_outside_the_window_pass_through(elapsed_s):
     assert relayed.msg is msg
 
 
-@pytest.mark.parametrize(("intensity", "level"), [(0.0, 0), (1.0, 255)])
-def test_the_frame_is_flooded_to_the_intensity(intensity, level):
-    camera_plan = ChannelPlan(
-        (PlannedEpisode(CameraBlackout(intensity=intensity, profile=Step()), ONSET_S, None),)
-    )
+# Intensity is how much of the frame the attack owns, and the two floods run opposite ways
+@pytest.mark.parametrize(
+    ("attack", "level"),
+    [
+        (CameraBlackout(intensity=1.0, profile=Step()), 0),
+        (CameraDazzle(intensity=1.0, profile=Step()), 255),
+        (CameraBlackout(intensity=0.5, profile=Step()), 64),
+        (CameraDazzle(intensity=0.5, profile=Step()), 192),
+    ],
+)
+def test_the_frame_floods_by_the_intensity(attack, level):
+    camera_plan = ChannelPlan((PlannedEpisode(attack, ONSET_S, None),))
 
     relayed = apply(make_frame(), None, camera_plan, ONSET_S)
 
@@ -53,7 +60,7 @@ def test_a_shaped_blackout_dims_part_of_the_way():
     camera_plan = ChannelPlan(
         (
             PlannedEpisode(
-                CameraBlackout(intensity=0.0, profile=Linear(rise_s=10.0, ease_s=2.0)),
+                CameraBlackout(intensity=1.0, profile=Linear(rise_s=10.0, ease_s=2.0)),
                 ONSET_S,
                 None,
             ),
@@ -62,7 +69,7 @@ def test_a_shaped_blackout_dims_part_of_the_way():
 
     dimmed = apply(make_frame(level=200), None, camera_plan, ONSET_S + 5.0).msg
 
-    assert set(dimmed.data) == {111}
+    assert set(dimmed.data) == {100}
 
 
 # A frozen frame is a replayed one, so it stays a plausible image of the wrong moment

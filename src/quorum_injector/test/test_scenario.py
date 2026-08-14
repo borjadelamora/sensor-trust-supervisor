@@ -16,7 +16,7 @@ from quorum_injector.scenario import (
 
 SCENARIOS = Path(__file__).parents[3] / "scenarios"
 
-LINEAR = {"shape": "linear", "rise_s": 49.5, "ease_s": 5.0}
+LINEAR = {"shape": "linear", "rise_s": 49.5, "ease_s": 2.5}
 
 FREEZE = {"attack": "gps_freeze", "onset_s": 20.0, "onset_jitter_s": 2.0, "duration_s": None}
 
@@ -34,11 +34,11 @@ BLACKOUT = {
     "onset_s": 26.0,
     "onset_jitter_s": 2.0,
     "duration_s": 10.0,
-    "intensity": 0.0,
+    "intensity": 1.0,
     "profile": {"shape": "step"},
 }
 
-DRIFT_ATTACK = GpsSpoof(offset_m=47.0, bearing_deg=60.0, profile=Linear(rise_s=49.5, ease_s=5.0))
+DRIFT_ATTACK = GpsSpoof(offset_m=47.0, bearing_deg=60.0, profile=Linear(rise_s=49.5, ease_s=2.5))
 
 
 def scenario_fields(**channels: dict[str, Any]) -> dict[str, Any]:
@@ -80,7 +80,7 @@ def test_each_channel_carries_its_own_attack(tmp_path):
     scenario = load_scenario(write_scenario(tmp_path, fields))
 
     assert scenario.gps[0].attack == DRIFT_ATTACK
-    assert scenario.camera[0].attack == CameraBlackout(intensity=0.0, profile=Step())
+    assert scenario.camera[0].attack == CameraBlackout(intensity=1.0, profile=Step())
     assert scenario.camera[0].onset_s == 26.0
 
 
@@ -208,6 +208,21 @@ def test_an_instant_ease_is_rejected(tmp_path):
 
     with pytest.raises(ScenarioError, match="ease_s is 0.0, it must be positive"):
         load_scenario(write_scenario(tmp_path, fields))
+
+
+# The scale multiplies a range, and a wobble deep enough would take it below zero.
+def test_a_scale_a_wobble_would_invert_is_rejected(tmp_path):
+    wobble = {
+        "shape": "oscillating",
+        "rise_s": 30.0,
+        "ease_s": 2.5,
+        "amplitude_fraction": 0.5,
+        "period_s": 12.0,
+    }
+    corruption = FREEZE | {"attack": "flow_corruption", "scale": 0.3, "profile": wobble}
+
+    with pytest.raises(ScenarioError, match="drives the range negative"):
+        load_scenario(write_scenario(tmp_path, scenario_fields(flow=corruption)))
 
 
 def test_absent_file_is_rejected(tmp_path):

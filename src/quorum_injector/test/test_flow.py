@@ -1,6 +1,6 @@
 import pytest
-from px4_msgs.msg import SensorOpticalFlow, VehicleOpticalFlowVel
-from quorum_injector.flow import apply_raw, apply_velocity
+from px4_msgs.msg import DistanceSensor, SensorOpticalFlow, VehicleOpticalFlowVel
+from quorum_injector.flow import apply_range, apply_raw, apply_velocity
 from quorum_injector.plan import ChannelPlan, PlannedEpisode
 from quorum_injector.profile import Step
 from quorum_injector.scenario import CameraBlackout, CameraFreeze, FlowCorruption
@@ -15,7 +15,10 @@ CORRUPTION = ChannelPlan(
     (PlannedEpisode(FlowCorruption(scale=SCALE, profile=Step()), ONSET_S, None),)
 )
 BLACKOUT = ChannelPlan(
-    (PlannedEpisode(CameraBlackout(intensity=0.0, profile=Step()), ONSET_S, None),)
+    (PlannedEpisode(CameraBlackout(intensity=1.0, profile=Step()), ONSET_S, None),)
+)
+HALF_BLACKOUT = ChannelPlan(
+    (PlannedEpisode(CameraBlackout(intensity=0.5, profile=Step()), ONSET_S, None),)
 )
 FROZEN = ChannelPlan((PlannedEpisode(CameraFreeze(), ONSET_S, None),))
 
@@ -39,6 +42,7 @@ def make_raw_flow() -> SensorOpticalFlow:
     msg.pixel_flow = [0.02, 0.01]
     msg.delta_angle = [0.001, 0.002, 0.003]
     msg.distance_m = DISTANCE_M
+    msg.distance_available = True
     msg.quality = QUALITY
     return msg
 
@@ -91,6 +95,25 @@ def test_the_range_carries_the_corruption_on_the_raw_topic():
     assert corrupted.distance_m == pytest.approx(DISTANCE_M * SCALE)
     assert list(corrupted.pixel_flow) == pytest.approx(list(msg.pixel_flow))
     assert corrupted.quality == QUALITY
+
+
+# The lens is a dimmer rather than a switch, so half a blackout leaves half the flow
+def test_a_partial_blackout_leaves_part_of_the_flow():
+    relayed = apply_velocity(make_flow(), BENIGN, HALF_BLACKOUT, ONSET_S)
+    raw = apply_raw(make_raw_flow(), BENIGN, HALF_BLACKOUT, ONSET_S).msg
+
+    assert list(relayed.msg.vel_ne) == pytest.approx([2.0, 1.0])
+    assert raw.quality == QUALITY // 2
+
+
+# The corrupted quantity is the range, and this airframe reports it on a topic of its own
+def test_the_range_topic_carries_the_corruption():
+    msg = DistanceSensor()
+    msg.current_distance = DISTANCE_M
+
+    corrupted = apply_range(msg, CORRUPTION, ONSET_S).msg
+
+    assert corrupted.current_distance == pytest.approx(DISTANCE_M * SCALE)
 
 
 # One lens feeds the frames and the flow, but only a blackout admits to bad quality

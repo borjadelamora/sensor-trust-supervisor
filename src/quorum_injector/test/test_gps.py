@@ -11,7 +11,7 @@ ONSET_S = 20.0
 BEARING_DEG = 60.0
 OFFSET_M = 47.0
 DRIFT = GpsSpoof(
-    offset_m=OFFSET_M, bearing_deg=BEARING_DEG, profile=Linear(rise_s=49.5, ease_s=5.0)
+    offset_m=OFFSET_M, bearing_deg=BEARING_DEG, profile=Linear(rise_s=49.5, ease_s=2.5)
 )
 JUMP = GpsSpoof(offset_m=50.0, bearing_deg=BEARING_DEG, profile=Step())
 

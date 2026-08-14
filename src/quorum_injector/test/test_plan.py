@@ -15,7 +15,7 @@ DURATION_S = 10.0
 FREEZE = (Episode(GpsFreeze(), onset_s=ONSET_S, onset_jitter_s=2.0, duration_s=None),)
 BLACKOUT = (
     Episode(
-        CameraBlackout(intensity=0.0, profile=Step()),
+        CameraBlackout(intensity=1.0, profile=Step()),
         onset_s=26.0,
         onset_jitter_s=2.0,
         duration_s=DURATION_S,

@@ -15,12 +15,10 @@ OSCILLATING = Oscillating(
 SHAPED = [LINEAR, SIGMOID, OSCILLATING]
 RISING = [LINEAR, SIGMOID]
 
-# The linear rate steps to zero at the rise, so the corner itself has no derivative to check
-JUST_BEFORE_RISE_S = RISE_S - 0.5
-
-# ATK-002 as a profile: 47 m at 1 m/s over a 5 s ramp
+# ATK-002 as a profile: 47 m at 1 m/s, eased on at both ends
 DRIFT_OFFSET_M = 47.0
-DRIFT_AS_LINEAR = Linear(rise_s=DRIFT_OFFSET_M + EASE_S / 2.0, ease_s=EASE_S)
+DRIFT_EASE_S = 2.5
+DRIFT_AS_LINEAR = Linear(rise_s=DRIFT_OFFSET_M + DRIFT_EASE_S, ease_s=DRIFT_EASE_S)
 
 
 def derivative_at(profile, since_onset_s: float, step_s: float = 1e-4) -> float:
@@ -32,7 +30,7 @@ def derivative_at(profile, since_onset_s: float, step_s: float = 1e-4) -> float:
 
 # The spoofed velocity is built from the rate, so it has to be the derivative of the offset
 @pytest.mark.parametrize("profile", SHAPED)
-@pytest.mark.parametrize("since_onset_s", [2.5, EASE_S, 12.0, JUST_BEFORE_RISE_S, 40.0])
+@pytest.mark.parametrize("since_onset_s", [2.5, EASE_S, 12.0, RISE_S - EASE_S, RISE_S, 40.0])
 def test_the_rate_is_the_derivative_of_the_fraction(profile, since_onset_s):
     assert profile.evaluate(since_onset_s).rate_per_s == pytest.approx(
         derivative_at(profile, since_onset_s), abs=1e-4
@@ -62,6 +60,14 @@ def test_a_rising_profile_holds_once_it_arrives(profile, since_onset_s):
     assert progress.rate_per_s == pytest.approx(0.0)
 
 
+# The bias is the rate, so a rate that stops dead hands a detector the end of the attack for free
+@pytest.mark.parametrize("profile", RISING)
+def test_a_rising_profile_hands_back_without_a_step(profile):
+    settling = profile.evaluate(RISE_S - 0.01).rate_per_s
+
+    assert settling < 0.01 * profile.evaluate(RISE_S / 2.0).rate_per_s
+
+
 # The wobble outlasts the rise, so a spoofer sitting on its target is still moving
 def test_the_wobble_stays_within_its_amplitude_and_outlasts_the_rise():
     samples = [OSCILLATING.evaluate(index / 10.0) for index in range(600)]
@@ -74,7 +80,14 @@ def test_the_wobble_stays_within_its_amplitude_and_outlasts_the_rise():
 # ATK-002 was flown and written up against the ramp-then-linear drift this profile replaces
 @pytest.mark.parametrize(
     ("since_onset_s", "offset_m", "bias_mps"),
-    [(0.0, 0.0, 0.0), (2.5, 0.625, 0.5), (EASE_S, 2.5, 1.0), (12.0, 9.5, 1.0), (40.0, 37.5, 1.0)],
+    [
+        (0.0, 0.0, 0.0),
+        (1.25, 0.3125, 0.5),
+        (DRIFT_EASE_S, 1.25, 1.0),
+        (12.0, 10.75, 1.0),
+        (40.0, 38.75, 1.0),
+        (48.5, 46.8, 0.4),
+    ],
 )
 def test_the_linear_profile_reproduces_the_drift_it_replaces(since_onset_s, offset_m, bias_mps):
     progress = DRIFT_AS_LINEAR.evaluate(since_onset_s)
@@ -88,7 +101,8 @@ def test_the_linear_profile_reproduces_the_drift_it_replaces(since_onset_s, offs
     [
         (Linear, {"rise_s": 0.0, "ease_s": 1.0}, "rise_s is 0.0"),
         (Linear, {"rise_s": 10.0, "ease_s": 0.0}, "ease_s is 0.0"),
-        (Linear, {"rise_s": 10.0, "ease_s": 11.0}, "longer than the 10.0 rise"),
+        (Linear, {"rise_s": 10.0, "ease_s": 11.0}, "the 10.0 rise has to hold two of them"),
+        (Linear, {"rise_s": 10.0, "ease_s": 6.0}, "the 10.0 rise has to hold two of them"),
         (Sigmoid, {"rise_s": -1.0}, "rise_s is -1.0"),
         (
             Oscillating,
