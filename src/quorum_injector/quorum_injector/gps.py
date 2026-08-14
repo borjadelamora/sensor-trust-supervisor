@@ -6,7 +6,7 @@ from typing import NamedTuple
 from px4_msgs.msg import SensorGps
 
 from quorum_injector.plan import ChannelPlan, Relayed
-from quorum_injector.scenario import GpsFreeze, GpsSpoof, NoAttack
+from quorum_injector.scenario import GpsFreeze, GpsSpoof
 
 
 @dataclass(frozen=True)
@@ -29,7 +29,7 @@ EARTH_RADIUS_M = 6_371_000.0
 def apply(msg: SensorGps, held: SensorGps, plan: ChannelPlan, elapsed_s: float) -> Relayed:
     episode = plan.active(elapsed_s)
 
-    if episode is None or isinstance(episode.attack, NoAttack):
+    if episode is None:
         return Relayed(msg, corrupted=False)
 
     match episode.attack:

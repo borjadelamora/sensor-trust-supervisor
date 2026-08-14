@@ -5,7 +5,7 @@ from typing import Any
 
 import rclpy
 from numpy.random import default_rng
-from px4_msgs.msg import SensorGps, SensorOpticalFlow, VehicleOpticalFlowVel
+from px4_msgs.msg import DistanceSensor, SensorGps, SensorOpticalFlow, VehicleOpticalFlowVel
 from rclpy import qos
 from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
@@ -25,11 +25,12 @@ class RelayNode(Node):
         self._px4_clock = clock.Clock()
         self._held_fix: SensorGps | None = None
         self._held_frame: Image | None = None
-        self._announced: set[str] = set()
+        self._corrupting: set[str] = set()
         self._handlers: dict[type, Handler] = {
             SensorGps: self._relay_gps,
             VehicleOpticalFlowVel: self._relay_flow,
             SensorOpticalFlow: self._relay_raw_flow,
+            DistanceSensor: self._relay_range,
             Image: self._relay_image,
         }
         scenario_file = self.declare_parameter("scenario_file", "").value
@@ -104,21 +105,26 @@ class RelayNode(Node):
         if not relayed.corrupted:
             self._held_fix = msg
 
-        self._publish(relayed, "gps", publisher, elapsed_s)
+        self._publish(relayed, publisher, elapsed_s)
 
     def _relay_flow(
         self, msg: VehicleOpticalFlowVel, publisher: Publisher, elapsed_s: float
     ) -> None:
         relayed = flow.apply_velocity(msg, self._plan.flow, self._plan.camera, elapsed_s)
 
-        self._publish(relayed, "flow", publisher, elapsed_s)
+        self._publish(relayed, publisher, elapsed_s)
 
     def _relay_raw_flow(
         self, msg: SensorOpticalFlow, publisher: Publisher, elapsed_s: float
     ) -> None:
         relayed = flow.apply_raw(msg, self._plan.flow, self._plan.camera, elapsed_s)
 
-        self._publish(relayed, "flow", publisher, elapsed_s)
+        self._publish(relayed, publisher, elapsed_s)
+
+    def _relay_range(self, msg: DistanceSensor, publisher: Publisher, elapsed_s: float) -> None:
+        relayed = flow.apply_range(msg, self._plan.flow, elapsed_s)
+
+        self._publish(relayed, publisher, elapsed_s)
 
     def _relay_image(self, msg: Image, publisher: Publisher, elapsed_s: float) -> None:
         relayed = camera.apply(msg, self._held_frame, self._plan.camera, elapsed_s)
@@ -126,22 +132,25 @@ class RelayNode(Node):
         if not relayed.corrupted:
             self._held_frame = msg
 
-        self._publish(relayed, "camera", publisher, elapsed_s)
+        self._publish(relayed, publisher, elapsed_s)
 
-    def _publish(
-        self, relayed: plan.Relayed, channel: str, publisher: Publisher, elapsed_s: float
-    ) -> None:
-        if relayed.corrupted:
-            self._announce(channel, elapsed_s)
+    def _publish(self, relayed: plan.Relayed, publisher: Publisher, elapsed_s: float) -> None:
+        self._announce(publisher.topic_name, relayed.corrupted, elapsed_s)
 
         publisher.publish(relayed.msg)
 
-    def _announce(self, channel: str, elapsed_s: float) -> None:
-        if channel in self._announced:
+    # Both edges of every window, so a second episode leaves a delivered onset of its own
+    def _announce(self, topic: str, corrupted: bool, elapsed_s: float) -> None:
+        if corrupted == (topic in self._corrupting):
             return
 
-        self.get_logger().warning(f"corrupting the {channel} stream from {elapsed_s:.2f} s")
-        self._announced.add(channel)
+        if corrupted:
+            self._corrupting.add(topic)
+            self.get_logger().warning(f"corrupting {topic} from {elapsed_s:.2f} s")
+            return
+
+        self._corrupting.discard(topic)
+        self.get_logger().info(f"{topic} is clean again from {elapsed_s:.2f} s")
 
 
 def main(args: list[str] | None = None) -> int:

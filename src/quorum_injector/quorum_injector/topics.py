@@ -1,6 +1,12 @@
 from dataclasses import dataclass
 
-from px4_msgs.msg import SensorCombined, SensorGps, SensorOpticalFlow, VehicleOpticalFlowVel
+from px4_msgs.msg import (
+    DistanceSensor,
+    SensorCombined,
+    SensorGps,
+    SensorOpticalFlow,
+    VehicleOpticalFlowVel,
+)
 from sensor_msgs.msg import Image
 
 OUT_PREFIX = "/fmu/out/"
@@ -30,5 +36,6 @@ def relayed_topics() -> tuple[MirroredTopic, ...]:
         MirroredTopic(SensorCombined, OUT_PREFIX + "sensor_combined"),
         MirroredTopic(SensorOpticalFlow, OUT_PREFIX + "sensor_optical_flow"),
         MirroredTopic(VehicleOpticalFlowVel, OUT_PREFIX + "vehicle_optical_flow_vel"),
+        MirroredTopic(DistanceSensor, OUT_PREFIX + "distance_sensor"),
         MirroredTopic(Image, "/camera/flow_image"),
     )

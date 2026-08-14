@@ -1,66 +1,94 @@
 import copy
+from dataclasses import dataclass
 
-from px4_msgs.msg import SensorOpticalFlow, VehicleOpticalFlowVel
+from px4_msgs.msg import DistanceSensor, SensorOpticalFlow, VehicleOpticalFlowVel
 
+from quorum_injector.camera import obscuration
 from quorum_injector.plan import ChannelPlan, Relayed
-from quorum_injector.scenario import CameraAttack, CameraBlackout, FlowCorruption, NoAttack
+from quorum_injector.scenario import CameraBlackout, CameraDazzle, CameraFreeze, FlowCorruption
 
 UNSCALED = 1.0
 BLIND = 0.0
+
+
+@dataclass(frozen=True)
+class Lens:
+    flow_factor: float
+    quality_factor: float
+
+
+CLEAR = Lens(UNSCALED, UNSCALED)
 
 
 def apply_velocity(
     msg: VehicleOpticalFlowVel, plan: ChannelPlan, camera_plan: ChannelPlan, elapsed_s: float
 ) -> Relayed:
     scale = flow_scale(plan, elapsed_s)
-    lens = lens_attack(camera_plan, elapsed_s)
+    lens = lens_state(camera_plan, elapsed_s)
 
-    if scale == UNSCALED and lens is None:
+    if scale == UNSCALED and lens == CLEAR:
         return Relayed(msg, corrupted=False)
 
-    # One lens feeds the frames and the flow, so blinding it takes the velocity with it
-    velocity_factor = BLIND if lens is not None else scale
-    rate_factor = BLIND if lens is not None else UNSCALED
+    corrupted_msg = copy.deepcopy(msg)
 
-    scaled_msg = copy.deepcopy(msg)
+    # One lens feeds the frames and the flow, and px4 still takes the gyro out of what it measures
+    if lens != CLEAR:
+        corrupted_msg.flow_rate_uncompensated *= lens.flow_factor
+        corrupted_msg.flow_rate_compensated = (
+            corrupted_msg.flow_rate_uncompensated - corrupted_msg.gyro_rate[:2]
+        )
 
-    scaled_msg.vel_body *= velocity_factor
-    scaled_msg.vel_ne *= velocity_factor
-    scaled_msg.vel_body_filtered *= velocity_factor
-    scaled_msg.vel_ne_filtered *= velocity_factor
+    velocity_factor = scale * lens.flow_factor
 
-    scaled_msg.flow_rate_uncompensated *= rate_factor
-    scaled_msg.flow_rate_compensated *= rate_factor
+    corrupted_msg.vel_body *= velocity_factor
+    corrupted_msg.vel_ne *= velocity_factor
+    corrupted_msg.vel_body_filtered *= velocity_factor
+    corrupted_msg.vel_ne_filtered *= velocity_factor
 
-    return Relayed(scaled_msg, corrupted=True)
+    return Relayed(corrupted_msg, corrupted=True)
 
 
 def apply_raw(
     msg: SensorOpticalFlow, plan: ChannelPlan, camera_plan: ChannelPlan, elapsed_s: float
 ) -> Relayed:
     scale = flow_scale(plan, elapsed_s)
-    lens = lens_attack(camera_plan, elapsed_s)
+    lens = lens_state(camera_plan, elapsed_s)
 
-    if scale == UNSCALED and lens is None:
+    # This airframe leaves the range out of the message, so there is nothing here to scale
+    ranged = msg.distance_available and scale != UNSCALED
+
+    if not ranged and lens == CLEAR:
         return Relayed(msg, corrupted=False)
 
-    scaled_msg = copy.deepcopy(msg)
+    corrupted_msg = copy.deepcopy(msg)
 
-    # The corrupted quantity is the range, so the rates it scales into velocity stay true
-    scaled_msg.distance_m *= scale
-    scaled_msg.pixel_flow *= BLIND if lens is not None else UNSCALED
+    if ranged:
+        corrupted_msg.distance_m *= scale
 
-    # A frozen scene still looks like a good reading, a blacked-out one does not
-    if isinstance(lens, CameraBlackout):
-        scaled_msg.quality = 0
+    if lens != CLEAR:
+        corrupted_msg.pixel_flow *= lens.flow_factor
+        corrupted_msg.quality = round(msg.quality * lens.quality_factor)
 
-    return Relayed(scaled_msg, corrupted=True)
+    return Relayed(corrupted_msg, corrupted=True)
+
+
+def apply_range(msg: DistanceSensor, plan: ChannelPlan, elapsed_s: float) -> Relayed:
+    scale = flow_scale(plan, elapsed_s)
+
+    if scale == UNSCALED:
+        return Relayed(msg, corrupted=False)
+
+    corrupted_msg = copy.deepcopy(msg)
+
+    corrupted_msg.current_distance *= scale
+
+    return Relayed(corrupted_msg, corrupted=True)
 
 
 def flow_scale(plan: ChannelPlan, elapsed_s: float) -> float:
     episode = plan.active(elapsed_s)
 
-    if episode is None or isinstance(episode.attack, NoAttack):
+    if episode is None:
         return UNSCALED
 
     match episode.attack:
@@ -71,10 +99,17 @@ def flow_scale(plan: ChannelPlan, elapsed_s: float) -> float:
             raise AssertionError(f"no corruption for {episode.attack}")
 
 
-def lens_attack(camera_plan: ChannelPlan, elapsed_s: float) -> CameraAttack | None:
+def lens_state(camera_plan: ChannelPlan, elapsed_s: float) -> Lens:
     episode = camera_plan.active(elapsed_s)
 
-    if episode is None or isinstance(episode.attack, NoAttack):
-        return None
+    if episode is None:
+        return CLEAR
 
-    return episode.attack
+    match episode.attack:
+        case CameraBlackout() | CameraDazzle() as lens:
+            passed = UNSCALED - obscuration(lens, elapsed_s - episode.onset_s)
+            return Lens(passed, passed)
+        case CameraFreeze():
+            return Lens(BLIND, UNSCALED)
+        case _:
+            raise AssertionError(f"no lens for {episode.attack}")

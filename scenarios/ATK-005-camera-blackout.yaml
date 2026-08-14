@@ -6,6 +6,6 @@ camera:
   onset_s: 20.0
   onset_jitter_s: 2.0
   duration_s: 15.0
-  intensity: 0.0
+  intensity: 1.0
   profile:
     shape: step

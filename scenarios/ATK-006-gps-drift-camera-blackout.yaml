@@ -11,12 +11,12 @@ gps:
   profile:
     shape: linear
     rise_s: 49.5
-    ease_s: 5.0
+    ease_s: 2.5
 camera:
   attack: camera_blackout
   onset_s: 26.0
   onset_jitter_s: 2.0
   duration_s: 15.0
-  intensity: 0.0
+  intensity: 1.0
   profile:
     shape: step

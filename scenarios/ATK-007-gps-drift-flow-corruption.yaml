@@ -11,7 +11,7 @@ gps:
   profile:
     shape: linear
     rise_s: 49.5
-    ease_s: 5.0
+    ease_s: 2.5
 flow:
   attack: flow_corruption
   onset_s: 26.0
@@ -21,4 +21,4 @@ flow:
   profile:
     shape: linear
     rise_s: 10.0
-    ease_s: 2.0
+    ease_s: 1.0

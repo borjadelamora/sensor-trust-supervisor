@@ -1,0 +1,21 @@
+# The spoofer hunts its target instead of settling on it, and the lens replays a still scene.
+scenario_id: ATK-010
+seed: 1
+gps:
+  attack: gps_spoof
+  onset_s: 20.0
+  onset_jitter_s: 2.0
+  duration_s: null
+  offset_m: 20.0
+  bearing_deg: 60.0
+  profile:
+    shape: oscillating
+    rise_s: 30.0
+    ease_s: 2.5
+    amplitude_fraction: 0.2
+    period_s: 15.0
+camera:
+  attack: camera_freeze
+  onset_s: 32.0
+  onset_jitter_s: 2.0
+  duration_s: 15.0

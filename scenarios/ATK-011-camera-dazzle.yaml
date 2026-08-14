@@ -1,0 +1,13 @@
+# The other end of the lens: it saturates rather than goes dark, and takes 8 s about it.
+scenario_id: ATK-011
+seed: 1
+camera:
+  attack: camera_dazzle
+  onset_s: 20.0
+  onset_jitter_s: 2.0
+  duration_s: 15.0
+  intensity: 1.0
+  profile:
+    shape: linear
+    rise_s: 8.0
+    ease_s: 2.0

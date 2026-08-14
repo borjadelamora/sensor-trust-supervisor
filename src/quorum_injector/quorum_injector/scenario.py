@@ -6,7 +6,7 @@ from typing import Any, ClassVar
 
 import yaml
 
-from quorum_injector.profile import Linear, Oscillating, Profile, Sigmoid, Step
+from quorum_injector.profile import Linear, Oscillating, Profile, Sigmoid, Step, overshoot
 
 FULL_TURN_DEG = 360.0
 
@@ -47,6 +47,13 @@ class FlowCorruption:
         if self.scale <= 0.0:
             raise ValueError(f"scale is {self.scale}, it must be positive")
 
+        # A reported range cannot go negative under an overshooting profile
+        past_target = overshoot(self.profile)
+        if self.scale * (1.0 + past_target) <= past_target:
+            raise ValueError(
+                f"scale is {self.scale}, low enough that this profile drives the range negative"
+            )
+
 
 @dataclass(frozen=True)
 class CameraBlackout:
@@ -56,8 +63,18 @@ class CameraBlackout:
     profile: Profile
 
     def __post_init__(self) -> None:
-        if not 0.0 <= self.intensity <= 1.0:
-            raise ValueError(f"intensity is {self.intensity}, it must be in range [0, 1]")
+        _check_intensity(self.intensity)
+
+
+@dataclass(frozen=True)
+class CameraDazzle:
+    label: ClassVar[str] = "camera_dazzle"
+
+    intensity: float
+    profile: Profile
+
+    def __post_init__(self) -> None:
+        _check_intensity(self.intensity)
 
 
 @dataclass(frozen=True)
@@ -65,9 +82,14 @@ class CameraFreeze:
     label: ClassVar[str] = "camera_freeze"
 
 
+def _check_intensity(intensity: float) -> None:
+    if not 0.0 < intensity <= 1.0:
+        raise ValueError(f"intensity is {intensity}, it must be in range (0, 1]")
+
+
 GpsAttack = NoAttack | GpsFreeze | GpsSpoof
 FlowAttack = NoAttack | FlowCorruption
-CameraAttack = NoAttack | CameraBlackout | CameraFreeze
+CameraAttack = NoAttack | CameraBlackout | CameraDazzle | CameraFreeze
 Attack = GpsAttack | FlowAttack | CameraAttack
 
 CHANNELS = ("gps", "flow", "camera")
@@ -79,7 +101,7 @@ SHAPE_KEY = "shape"
 _GPS_ATTACKS: dict[str, type[GpsAttack]] = {c.label: c for c in (GpsFreeze, GpsSpoof)}
 _FLOW_ATTACKS: dict[str, type[FlowAttack]] = {c.label: c for c in (FlowCorruption,)}
 _CAMERA_ATTACKS: dict[str, type[CameraAttack]] = {
-    c.label: c for c in (CameraBlackout, CameraFreeze)
+    c.label: c for c in (CameraBlackout, CameraDazzle, CameraFreeze)
 }
 _PROFILES: dict[str, type[Profile]] = {c.label: c for c in (Step, Linear, Sigmoid, Oscillating)}
 

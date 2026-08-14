@@ -25,7 +25,13 @@ class ChannelPlan:
 
     # Jitter can draw two declared episodes into each other, and the earlier one keeps the channel
     def active(self, elapsed_s: float) -> PlannedEpisode | None:
-        return next((episode for episode in self.episodes if episode.contains(elapsed_s)), None)
+        episode = next((e for e in self.episodes if e.contains(elapsed_s)), None)
+
+        # A channel declared benign holds the window and corrupts nothing in it
+        if episode is None or isinstance(episode.attack, NoAttack):
+            return None
+
+        return episode
 
 
 @dataclass(frozen=True)

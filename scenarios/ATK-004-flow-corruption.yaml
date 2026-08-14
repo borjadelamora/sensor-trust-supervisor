@@ -10,4 +10,4 @@ flow:
   profile:
     shape: linear
     rise_s: 10.0
-    ease_s: 2.0
+    ease_s: 1.0

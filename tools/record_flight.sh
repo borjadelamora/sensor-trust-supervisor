@@ -229,6 +229,7 @@ if [ "$MODEL" = gz_x500_flow ]; then
     /fmu/out/distance_sensor
     /quorum/vehicle_optical_flow_vel
     /quorum/sensor_optical_flow
+    /quorum/distance_sensor
     "$CAMERA_TOPIC"
     "$CAMERA_TWIN"
   )
