@@ -16,3 +16,4 @@ This folder is a collection of Architecture Decision Records following the forma
 | [0003](0003-textured-world-for-optical-flow.md) | Textured simulation world for optical flow | Accepted |
 | [0004](0004-injector-at-topic-level.md) | Injecting attacks at the ROS topic level | Accepted |
 | [0005](0005-attack-profiles-and-episodes.md) | Attack profiles and episodes | Accepted |
+| [0006](0006-attack-strength-and-the-relayed-range.md) | Attack strength and the relayed range | Accepted |

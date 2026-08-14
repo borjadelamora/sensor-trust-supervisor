@@ -73,6 +73,7 @@ the new name. Given no scenario it republishes untouched.
 | `/fmu/out/sensor_combined` | `/quorum/sensor_combined` |
 | `/fmu/out/sensor_optical_flow` | `/quorum/sensor_optical_flow` |
 | `/fmu/out/vehicle_optical_flow_vel` | `/quorum/vehicle_optical_flow_vel` |
+| `/fmu/out/distance_sensor` | `/quorum/distance_sensor` |
 | `/camera/flow_image` | `/quorum/flow_image` |
 
 PX4 navigates on the sources, and the twins exist for the supervision layer alone. That keeps
