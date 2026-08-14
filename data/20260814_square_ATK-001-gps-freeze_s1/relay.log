@@ -1,0 +1,3 @@
+[INFO] [1786698788.146818440] [relay_node]: ATK-001 [gps]: GpsFreeze() at 20.05 s for None, seed 1
+[INFO] [1786698788.193806106] [relay_node]: onsets count from px4 stamp 1786698787.580 s
+[WARN] [1786698812.295703730] [relay_node]: corrupting /quorum/vehicle_gps_position from 20.07 s

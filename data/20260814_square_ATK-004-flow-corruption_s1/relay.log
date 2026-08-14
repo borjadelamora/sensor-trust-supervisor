@@ -1,0 +1,4 @@
+[INFO] [1786699148.148241402] [relay_node]: ATK-004 [flow]: FlowCorruption(scale=0.5, profile=Linear(rise_s=10.0, ease_s=1.0)) at 21.80 s for None, seed 1
+[INFO] [1786699148.235562563] [relay_node]: onsets count from px4 stamp 1786699145.684 s
+[WARN] [1786699168.563924264] [relay_node]: corrupting /quorum/vehicle_optical_flow_vel from 21.81 s
+[WARN] [1786699168.569272828] [relay_node]: corrupting /quorum/distance_sensor from 21.81 s

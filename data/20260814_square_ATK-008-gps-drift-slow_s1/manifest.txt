@@ -1,0 +1,12 @@
+run: 20260814_square_ATK-008-gps-drift-slow_s1
+mission: square
+model: gz_x500_flow
+world: baylands
+seed: 1
+date: 2026-08-14T11:29:12+02:00
+commit: 5744707
+px4_version: v1.17.0
+home_yaw_rad: 3.2228
+camera_gz_topic: /world/baylands/model/x500_flow_0/link/flow_link/sensor/flow_camera/image
+scenario: ATK-008-gps-drift-slow
+exit_code: 0

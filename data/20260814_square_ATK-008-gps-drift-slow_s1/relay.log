@@ -1,0 +1,3 @@
+[INFO] [1786699678.498814127] [relay_node]: ATK-008 [gps]: GpsSpoof(offset_m=14.0, bearing_deg=60.0, profile=Linear(rise_s=49.2, ease_s=2.5)) at 20.05 s for None, seed 1
+[INFO] [1786699681.487622176] [relay_node]: onsets count from px4 stamp 1786699677.393 s
+[WARN] [1786699699.129355530] [relay_node]: corrupting /quorum/vehicle_gps_position from 20.07 s

@@ -1,0 +1,8 @@
+[INFO] [1786699272.109351132] [relay_node]: ATK-005 [camera]: CameraBlackout(intensity=1.0, profile=Step()) at 18.58 s for 15.0, seed 1
+[INFO] [1786699272.168605350] [relay_node]: onsets count from px4 stamp 1786699271.052 s
+[WARN] [1786699294.840805271] [relay_node]: corrupting /quorum/flow_image from 18.58 s
+[WARN] [1786699294.842432079] [relay_node]: corrupting /quorum/sensor_optical_flow from 18.59 s
+[WARN] [1786699294.843667928] [relay_node]: corrupting /quorum/vehicle_optical_flow_vel from 18.59 s
+[INFO] [1786699304.978767374] [relay_node]: /quorum/flow_image is clean again from 33.59 s
+[INFO] [1786699304.995072848] [relay_node]: /quorum/sensor_optical_flow is clean again from 33.59 s
+[INFO] [1786699304.998714030] [relay_node]: /quorum/vehicle_optical_flow_vel is clean again from 33.59 s

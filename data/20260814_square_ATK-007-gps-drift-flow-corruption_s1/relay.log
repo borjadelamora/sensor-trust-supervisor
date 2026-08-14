@@ -1,0 +1,6 @@
+[INFO] [1786699550.719947931] [relay_node]: ATK-007 [gps]: GpsSpoof(offset_m=47.0, bearing_deg=60.0, profile=Linear(rise_s=49.5, ease_s=2.5)) at 20.05 s for None, seed 1
+[INFO] [1786699550.720595189] [relay_node]: ATK-007 [flow]: FlowCorruption(scale=0.7, profile=Linear(rise_s=10.0, ease_s=1.0)) at 27.80 s for None, seed 1
+[INFO] [1786699550.778192166] [relay_node]: onsets count from px4 stamp 1786699552.284 s
+[WARN] [1786699572.430912477] [relay_node]: corrupting /quorum/vehicle_gps_position from 20.06 s
+[WARN] [1786699585.584218105] [relay_node]: corrupting /quorum/distance_sensor from 27.80 s
+[WARN] [1786699585.586277762] [relay_node]: corrupting /quorum/vehicle_optical_flow_vel from 27.81 s

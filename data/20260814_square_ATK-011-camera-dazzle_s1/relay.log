@@ -1,0 +1,8 @@
+[INFO] [1786700086.746033063] [relay_node]: ATK-011 [camera]: CameraDazzle(intensity=1.0, profile=Linear(rise_s=8.0, ease_s=2.0)) at 18.58 s for 15.0, seed 1
+[INFO] [1786700086.817446125] [relay_node]: onsets count from px4 stamp 1786700085.024 s
+[WARN] [1786700108.313429275] [relay_node]: corrupting /quorum/sensor_optical_flow from 18.58 s
+[WARN] [1786700108.315564648] [relay_node]: corrupting /quorum/vehicle_optical_flow_vel from 18.58 s
+[WARN] [1786700108.329041933] [relay_node]: corrupting /quorum/flow_image from 18.60 s
+[INFO] [1786700119.384291065] [relay_node]: /quorum/flow_image is clean again from 33.58 s
+[INFO] [1786700119.397960299] [relay_node]: /quorum/sensor_optical_flow is clean again from 33.59 s
+[INFO] [1786700119.400292114] [relay_node]: /quorum/vehicle_optical_flow_vel is clean again from 33.59 s

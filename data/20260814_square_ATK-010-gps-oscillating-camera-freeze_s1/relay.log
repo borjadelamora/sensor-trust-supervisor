@@ -1,0 +1,10 @@
+[INFO] [1786699967.142748388] [relay_node]: ATK-010 [gps]: GpsSpoof(offset_m=20.0, bearing_deg=60.0, profile=Oscillating(rise_s=30.0, ease_s=2.5, amplitude_fraction=0.2, period_s=15.0)) at 20.05 s for None, seed 1
+[INFO] [1786699967.143260346] [relay_node]: ATK-010 [camera]: CameraFreeze() at 30.58 s for 15.0, seed 1
+[INFO] [1786699967.199146182] [relay_node]: onsets count from px4 stamp 1786699963.246 s
+[WARN] [1786699985.276742659] [relay_node]: corrupting /quorum/vehicle_gps_position from 20.05 s
+[WARN] [1786699993.837251073] [relay_node]: corrupting /quorum/sensor_optical_flow from 30.58 s
+[WARN] [1786699993.839042147] [relay_node]: corrupting /quorum/vehicle_optical_flow_vel from 30.58 s
+[WARN] [1786699993.858436145] [relay_node]: corrupting /quorum/flow_image from 30.60 s
+[INFO] [1786700012.674381282] [relay_node]: /quorum/flow_image is clean again from 49.43 s
+[INFO] [1786700012.687068400] [relay_node]: /quorum/sensor_optical_flow is clean again from 49.43 s
+[INFO] [1786700012.688727016] [relay_node]: /quorum/vehicle_optical_flow_vel is clean again from 49.43 s

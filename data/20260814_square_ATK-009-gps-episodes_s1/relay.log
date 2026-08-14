@@ -1,0 +1,7 @@
+[INFO] [1786699802.169095593] [relay_node]: ATK-009 [gps]: GpsSpoof(offset_m=20.0, bearing_deg=60.0, profile=Sigmoid(rise_s=12.0)) at 15.05 s for 12.0, seed 1
+[INFO] [1786699802.169736434] [relay_node]: ATK-009 [gps]: GpsFreeze() at 41.80 s for 10.0, seed 1
+[INFO] [1786699802.227280153] [relay_node]: onsets count from px4 stamp 1786699800.980 s
+[WARN] [1786699816.853909729] [relay_node]: corrupting /quorum/vehicle_gps_position from 15.07 s
+[INFO] [1786699831.542415076] [relay_node]: /quorum/vehicle_gps_position is clean again from 30.56 s
+[WARN] [1786699847.469620974] [relay_node]: corrupting /quorum/vehicle_gps_position from 41.82 s
+[INFO] [1786699853.374989873] [relay_node]: /quorum/vehicle_gps_position is clean again from 51.82 s
