@@ -56,6 +56,7 @@ PX4_PID=""
 AGENT_PID=""
 RELAY_PID=""
 BRIDGE_PID=""
+MONITOR_PID=""
 
 kill_stack() {
   pkill -9 -f ninja || true
@@ -63,8 +64,10 @@ kill_stack() {
   kill -9 "$AGENT_PID" 2>/dev/null || true
   kill -9 "$RELAY_PID" 2>/dev/null || true
   kill -9 "$BRIDGE_PID" 2>/dev/null || true
+  kill -9 "$MONITOR_PID" 2>/dev/null || true
   pkill -9 -f MicroXRCEAgent || true
   pkill -9 -f relay_node || true
+  pkill -9 -f gnss_monitor_node || true
   pkill -9 -f parameter_bridge || true
   pkill -9 -f '[g]z sim' || true
   pkill -9 -f 'px4_sitl_default/bin/[p]x4' || true
@@ -209,8 +212,27 @@ if [ "$MODEL" = gz_x500_flow ]; then
   done
 fi
 
+echo "Starting the gnss monitor..."
+
+MONITOR_LOG=$(mktemp)
+ros2 run quorum_monitors gnss_monitor_node >"$MONITOR_LOG" 2>&1 &
+MONITOR_PID=$!
+
+# It only publishes once it holds an anchor, so its own topic is not the thing to wait on
+WAITED_S=0
+while ! ros2 node list 2>/dev/null | grep -q '/gnss_monitor'; do
+  sleep 1
+  WAITED_S=$((WAITED_S + 1))
+  if [ "$WAITED_S" -ge 20 ]; then
+    echo "No gnss monitor after ${WAITED_S}s"
+    cat "$MONITOR_LOG"
+    exit 2
+  fi
+done
+
 cd "$REPO"
 TOPICS=(
+  /quorum/gnss_residual
   /fmu/out/vehicle_gps_position
   /fmu/out/sensor_combined
   /fmu/out/vehicle_attitude
@@ -279,6 +301,7 @@ exit_code: $EXIT_CODE
 EOF
 
 mv "$RELAY_LOG" "$BAG_DIR/relay.log"
+mv "$MONITOR_LOG" "$BAG_DIR/monitor.log"
 
 echo "Finished $RUN with exit code $EXIT_CODE"
 sed 's/.*\] //' "$BAG_DIR/relay.log"
