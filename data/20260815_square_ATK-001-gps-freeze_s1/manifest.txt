@@ -1,0 +1,12 @@
+run: 20260815_square_ATK-001-gps-freeze_s1
+mission: square
+model: gz_x500_flow
+world: baylands
+seed: 1
+date: 2026-08-15T22:41:01+02:00
+commit: 5ec7f78
+px4_version: v1.17.0
+home_yaw_rad: 3.2228
+camera_gz_topic: /world/baylands/model/x500_flow_0/link/flow_link/sensor/flow_camera/image
+scenario: ATK-001-gps-freeze
+exit_code: 0

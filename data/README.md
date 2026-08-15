@@ -11,6 +11,9 @@ manifest and rerunning the script with the same mission, scenario and seed.
 from and the onset drawn for each channel. Every onset is relative to that stamp, so it is the
 file an experiment entry quotes them against. Runs recorded before 12 August predate it.
 
+`monitor.log` is what the GNSS monitor printed: the fixes and IMU samples it turned away, and
+the reasons it re-anchored. Runs recorded before 15 August predate it.
+
 Manifest fields:
 
 | Field | Meaning |

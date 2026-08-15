@@ -1,0 +1,4 @@
+run,scenario,peak_residual_mps,p50_residual_mps,p95_residual_mps,pre_onset_max_mps,threshold_mps,onset_to_crossing_s,detected
+20260815_square_none_s1,none,1.104,0.653,1.053,,1.40,,false
+20260815_square_ATK-001-gps-freeze_s1,ATK-001-gps-freeze,5.579,0.537,5.449,0.325,1.40,0.030,true
+20260815_square_ATK-002-gps-drift_s1,ATK-002-gps-drift,1.099,0.198,0.606,0.490,1.40,,false
