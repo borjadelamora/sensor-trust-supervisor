@@ -73,6 +73,7 @@ the new name. Given no scenario it republishes untouched.
 | `/fmu/out/sensor_combined` | `/quorum/sensor_combined` |
 | `/fmu/out/sensor_optical_flow` | `/quorum/sensor_optical_flow` |
 | `/fmu/out/vehicle_optical_flow_vel` | `/quorum/vehicle_optical_flow_vel` |
+| `/fmu/out/vehicle_attitude` | `/quorum/vehicle_attitude` |
 | `/fmu/out/distance_sensor` | `/quorum/distance_sensor` |
 | `/camera/flow_image` | `/quorum/flow_image` |
 
@@ -83,7 +84,9 @@ through whatever navigates on the twins. Currently the mission flies from the so
 attacked flight follows the same square as a clean one.
 
 The IMU is the reference the other two channels get checked against, so `sensor_combined` is
-relayed as it comes and v1 trusts it.
+relayed as it comes and v1 trusts it. `vehicle_attitude` is relayed on the same terms: the
+accelerations are in the body frame, and the quaternion is what turns them into NED. It comes
+out of EKF2 rather than off a sensor, so it is not as independent of GPS as the raw IMU is.
 
 Attack onsets are counted in PX4's clock, from the first stamp the relay sees, so all three
 channels are timed against one reference.

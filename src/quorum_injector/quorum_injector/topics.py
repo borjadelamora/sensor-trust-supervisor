@@ -5,6 +5,7 @@ from px4_msgs.msg import (
     SensorCombined,
     SensorGps,
     SensorOpticalFlow,
+    VehicleAttitude,
     VehicleOpticalFlowVel,
 )
 from sensor_msgs.msg import Image
@@ -36,6 +37,7 @@ def relayed_topics() -> tuple[MirroredTopic, ...]:
         MirroredTopic(SensorCombined, OUT_PREFIX + "sensor_combined"),
         MirroredTopic(SensorOpticalFlow, OUT_PREFIX + "sensor_optical_flow"),
         MirroredTopic(VehicleOpticalFlowVel, OUT_PREFIX + "vehicle_optical_flow_vel"),
+        MirroredTopic(VehicleAttitude, OUT_PREFIX + "vehicle_attitude"),
         MirroredTopic(DistanceSensor, OUT_PREFIX + "distance_sensor"),
         MirroredTopic(Image, "/camera/flow_image"),
     )

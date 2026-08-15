@@ -219,6 +219,7 @@ TOPICS=(
   /fmu/out/vehicle_land_detected
   /quorum/vehicle_gps_position
   /quorum/sensor_combined
+  /quorum/vehicle_attitude
 )
 
 # Only the flow airframe carries these
