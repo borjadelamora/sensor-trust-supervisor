@@ -1,7 +1,8 @@
 # Architecture
 
-What the system looks like so far. This is a sketch: the offboard flight node and the attack
-injector exist, and the supervision side is still a plan. It grows as things get built.
+What the system looks like so far. This is a sketch: the offboard flight node, the attack
+injector and the first monitor exist, while the arbiter above them is still a plan. It grows as
+things get built.
 
 ## Tiers
 
@@ -18,7 +19,12 @@ injector exist, and the supervision side is still a plan. It grows as things get
      |              quorum_injector: relays the sensor topics, corrupting them on demand
      v
   /quorum/*         what the supervision layer reads
-                    (monitors, arbiter and behaviour tree come later)
+     |
+     v
+  quorum_monitors   gnss_monitor: a physics gate on the fix, and a velocity residual
+     |              against dead reckoning
+     v
+  (to come)         arbiter and behaviour tree
 ```
 
 The layering is the point of the project. PX4's estimator stays exactly as it is, and whatever
