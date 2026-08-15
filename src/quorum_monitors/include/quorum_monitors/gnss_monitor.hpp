@@ -8,6 +8,8 @@
 #include <numbers>
 #include <string_view>
 
+#include "quorum_monitors/velocity_reference.hpp"
+
 namespace quorum_monitors {
 
 /// A GPS fix in WGS84, horizontal only: the gate bounds lateral speed and nothing else
@@ -131,6 +133,15 @@ constexpr double kEarthRadiusM = 6'371'000.0;
 
   return GateVerdict{
       .speed_mps = speed_mps, .dt_s = dt_s, .exceeded = speed_mps > limits.limit_mps};
+}
+
+/// gps minus the reference, keeping a bias at its own sign and bearing
+[[nodiscard]] inline VelocityNed velocity_residual(const VelocityNed& gps,
+                                                   const VelocityNed& reference)
+{
+  return VelocityNed{.north_mps = gps.north_mps - reference.north_mps,
+                     .east_mps = gps.east_mps - reference.east_mps,
+                     .down_mps = gps.down_mps - reference.down_mps};
 }
 
 }  // namespace quorum_monitors
