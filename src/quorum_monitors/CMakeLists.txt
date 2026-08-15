@@ -15,6 +15,9 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(px4_msgs REQUIRED)
+find_package(geometry_msgs REQUIRED)
+find_package(eigen3_cmake_module REQUIRED)
+find_package(Eigen3 REQUIRED)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
@@ -32,11 +35,18 @@ if(BUILD_TESTING)
   find_package(ament_cmake_gtest REQUIRED)
   ament_add_gtest(test_gnss_monitor test/test_gnss_monitor.cpp)
   target_include_directories(test_gnss_monitor PRIVATE include)
+  # Eigen arrives as an imported target, which keeps its headers out of -Wconversion
+  target_link_libraries(test_gnss_monitor Eigen3::Eigen)
+
+  ament_add_gtest(test_velocity_reference test/test_velocity_reference.cpp)
+  target_include_directories(test_velocity_reference PRIVATE include)
+  target_link_libraries(test_velocity_reference Eigen3::Eigen)
 endif()
 
 add_executable(gnss_monitor_node src/gnss_monitor_node.cpp)
 target_include_directories(gnss_monitor_node PRIVATE include)
-ament_target_dependencies(gnss_monitor_node rclcpp px4_msgs)
+target_link_libraries(gnss_monitor_node Eigen3::Eigen)
+ament_target_dependencies(gnss_monitor_node rclcpp px4_msgs geometry_msgs)
 
 install(TARGETS gnss_monitor_node
   DESTINATION lib/${PROJECT_NAME})
