@@ -18,7 +18,8 @@ constexpr Attitude kNoseUp{.w = kHalfRootTwo, .y = kHalfRootTwo};
 // What a level accelerometer reads standing still
 constexpr AccelerationFrd kLevelAtRest{.down_mps2 = -kGravityMps2};
 
-constexpr ReferenceLimits kLimits{.max_gap_s = 0.05, .max_age_s = 10.0};
+constexpr ReferenceLimits kLimits{
+    .max_gap_s = 0.05, .max_age_s = 10.0, .max_attitude_age_s = 0.1};
 
 constexpr double kAnchoredAtS = 20.0;
 
@@ -97,6 +98,19 @@ TEST(VelocityReference, DropsTheEstimateAcrossAGap)
                 .error(),
             ReferenceError::kGap);
   EXPECT_FALSE(reference.anchored());
+}
+
+TEST(VelocityReference, RefusesAnImuSampleAnOldAttitudeCannotRotate)
+{
+  VelocityReference reference(kLimits);
+  reference.anchor(VelocityNed{}, kAnchoredAtS);
+
+  const ImuSample imu{.acceleration = kLevelAtRest, .time_s = kAnchoredAtS + 0.01};
+  const AttitudeSample stale{.attitude = kLevel,
+                             .time_s = kAnchoredAtS - kLimits.max_attitude_age_s};
+
+  EXPECT_EQ(reference.advance(imu, stale).error(), ReferenceError::kStaleAttitude);
+  EXPECT_TRUE(reference.anchored());
 }
 
 TEST(VelocityReference, ExpiresAnAnchorPastItsAge)

@@ -12,6 +12,7 @@
 #include "rclcpp/rclcpp.hpp"
 
 #include "quorum_monitors/gnss_monitor.hpp"
+#include "quorum_monitors/px4_time.hpp"
 
 namespace quorum_monitors {
 
@@ -31,7 +32,7 @@ constexpr double kMaxGapS = 0.05;
 constexpr double kMaxAgeS = 10.0;
 
 // Five intervals of the 50 Hz attitude stream
-constexpr double kAttitudeStaleS = 0.1;
+constexpr double kMaxAttitudeAgeS = 0.1;
 
 // px4 leaves a stamp it has not filled in at zero
 constexpr uint64_t kUnsetStampUs = 0;
@@ -47,7 +48,9 @@ public:
         limits_{.limit_mps = kKinematicLimitMps,
                 .min_interval_s = kMinIntervalS,
                 .max_interval_s = kMaxIntervalS},
-        reference_(ReferenceLimits{.max_gap_s = kMaxGapS, .max_age_s = kMaxAgeS})
+        reference_(ReferenceLimits{.max_gap_s = kMaxGapS,
+                                   .max_age_s = kMaxAgeS,
+                                   .max_attitude_age_s = kMaxAttitudeAgeS})
   {
     residual_publisher_ = this->create_publisher<geometry_msgs::msg::Vector3Stamped>(
         "/quorum/gnss_residual", kResidualQueueDepth);
@@ -110,13 +113,6 @@ private:
     }
 
     const double time_s = seconds_from_micros(msg.timestamp);
-    const double attitude_age_s = time_s - attitude_->time_s;
-
-    if (attitude_age_s > kAttitudeStaleS) {
-      RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), kWarnThrottleMs,
-                           "attitude %.2f s behind the imu", attitude_age_s);
-      return;
-    }
 
     const AccelerationFrd acceleration{
         .forward_mps2 = static_cast<double>(msg.accelerometer_m_s2[0]),

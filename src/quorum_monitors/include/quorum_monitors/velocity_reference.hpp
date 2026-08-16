@@ -48,14 +48,15 @@ struct AttitudeSample {
   double time_s{};
 };
 
-/// max_gap_s bounds a single integration step, max_age_s the whole life of an anchor
+/// The ages and intervals past which dead reckoning stops being worth trusting
 struct ReferenceLimits {
   double max_gap_s{};
   double max_age_s{};
+  double max_attitude_age_s{};
 };
 
 /// kGap is one interval too long, kExpired an anchor too old
-enum class ReferenceError { kNoAnchor, kNotAdvanced, kGap, kExpired };
+enum class ReferenceError { kNoAnchor, kNotAdvanced, kGap, kNoAttitude, kStaleAttitude, kExpired };
 
 [[nodiscard]] constexpr std::string_view to_string(ReferenceError error)
 {
@@ -68,6 +69,12 @@ enum class ReferenceError { kNoAnchor, kNotAdvanced, kGap, kExpired };
 
     case ReferenceError::kGap:
       return "Gap";
+
+    case ReferenceError::kNoAttitude:
+      return "No Attitude";
+
+    case ReferenceError::kStaleAttitude:
+      return "Stale Attitude";
 
     case ReferenceError::kExpired:
       return "Expired";
@@ -121,6 +128,7 @@ public:
   {
     assert(limits.max_gap_s > 0.0);
     assert(limits.max_age_s > 0.0);
+    assert(limits.max_attitude_age_s > 0.0);
   }
 
   void anchor(VelocityNed velocity, double time_s)
@@ -146,6 +154,10 @@ public:
     if (dt_s > limits_.max_gap_s) {
       reset();
       return std::unexpected(ReferenceError::kGap);
+    }
+
+    if (imu_sample.time_s - attitude_sample.time_s > limits_.max_attitude_age_s) {
+      return std::unexpected(ReferenceError::kStaleAttitude);
     }
 
     const AccelerationNed acceleration =

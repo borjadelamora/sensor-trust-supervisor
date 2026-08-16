@@ -3,7 +3,6 @@
 
 #include <cassert>
 #include <cmath>
-#include <cstdint>
 #include <expected>
 #include <numbers>
 #include <string_view>
@@ -72,11 +71,6 @@ constexpr double kEarthRadiusM = 6'371'000.0;
   }
 
   return "Unknown Gate Error";
-}
-
-[[nodiscard]] constexpr double seconds_from_micros(uint64_t micros)
-{
-  return static_cast<double>(micros) / 1e6;
 }
 
 [[nodiscard]] constexpr double to_radians(double degrees)
