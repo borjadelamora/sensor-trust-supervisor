@@ -1,0 +1,16 @@
+[INFO] [1786894817.183337797] [gnss_monitor]: anchoring on gps: No Anchor
+[WARN] [1786894817.183680275] [gnss_monitor]: no attitude yet
+[INFO] [1786894827.658097710] [gnss_monitor]: anchoring on gps: No Anchor
+[INFO] [1786894827.662049937] [gnss_monitor]: imu sample rejected: Not Advanced
+[INFO] [1786894827.806202458] [gnss_monitor]: gps interval too long to judge
+[INFO] [1786894839.445199384] [gnss_monitor]: anchoring on gps: Expired
+[INFO] [1786894839.449350692] [gnss_monitor]: imu sample rejected: Not Advanced
+[INFO] [1786894843.056357393] [gnss_monitor]: imu sample rejected: Not Advanced
+[INFO] [1786894843.084889157] [gnss_monitor]: anchoring on gps: No Anchor
+[INFO] [1786894856.890683370] [gnss_monitor]: anchoring on gps: Expired
+[INFO] [1786894860.676056959] [gnss_monitor]: imu sample rejected: Gap
+[INFO] [1786894860.681792860] [gnss_monitor]: gps interval too long to judge
+[INFO] [1786894860.681848478] [gnss_monitor]: anchoring on gps: No Anchor
+[INFO] [1786894871.976043900] [gnss_monitor]: anchoring on gps: Expired
+[INFO] [1786894875.393517396] [gnss_monitor]: imu sample rejected: Gap
+[INFO] [1786894875.401641827] [gnss_monitor]: anchoring on gps: No Anchor

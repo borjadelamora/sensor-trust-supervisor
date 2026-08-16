@@ -1,0 +1,14 @@
+[INFO] [1786894928.363146025] [flow_monitor]: flow sample rejected: No Reference
+[INFO] [1786894931.870972517] [flow_monitor]: flow sample rejected: Not Advanced
+[INFO] [1786894931.881914781] [flow_monitor]: imu sample rejected: Gap
+[INFO] [1786894937.172511839] [flow_monitor]: flow sample rejected: No Reference
+[INFO] [1786894947.699487558] [flow_monitor]: imu sample rejected: Gap
+[INFO] [1786894947.715542468] [flow_monitor]: flow sample rejected: No Reference
+[INFO] [1786894960.632821634] [flow_monitor]: flow sample rejected: No Reference
+[INFO] [1786894964.278208900] [flow_monitor]: imu sample rejected: Gap
+[INFO] [1786894964.298907267] [flow_monitor]: flow sample rejected: No Reference
+[INFO] [1786894976.598477858] [flow_monitor]: flow sample rejected: No Reference
+[INFO] [1786894980.514691056] [flow_monitor]: flow sample rejected: Not Advanced
+[INFO] [1786894980.522467680] [flow_monitor]: imu sample rejected: Gap
+[WARN] [1786894983.781362730] [flow_monitor]: flow Suspect at 1.95 m/s
+[INFO] [1786894994.027358307] [flow_monitor]: flow sample rejected: No Reference

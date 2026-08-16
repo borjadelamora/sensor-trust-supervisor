@@ -1,0 +1,4 @@
+run,scenario,peak_residual_mps,p50_residual_mps,p95_residual_mps,pre_onset_max_mps,threshold_mps,sustain_s,onset_to_suspect_s,suspect_episodes
+20260816_square_none_s1,none,2.525,0.474,1.015,,1.0,2.0,,0
+20260816_square_ATK-004-flow-corruption_s1,ATK-004-flow-corruption,3.771,0.476,2.996,3.303,1.0,2.0,17.430,2
+20260816_square_ATK-007-gps-drift-flow-corruption_s1,ATK-007-gps-drift-flow-corruption,2.483,0.594,1.990,2.483,1.0,2.0,33.604,1

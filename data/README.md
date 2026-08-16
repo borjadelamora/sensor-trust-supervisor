@@ -12,7 +12,9 @@ from and the onset drawn for each channel. Every onset is relative to that stamp
 file an experiment entry quotes them against. Runs recorded before 12 August predate it.
 
 `monitor.log` is what the GNSS monitor printed: the fixes and IMU samples it turned away, and
-the reasons it re-anchored. Runs recorded before 15 August predate it.
+the reasons it re-anchored. Runs recorded before 15 August predate it. From 16 August a second
+monitor reads the flow, so the two logs are `gnss_monitor.log` and `flow_monitor.log`, and the
+flow one also records every trust level it changed to.
 
 Manifest fields:
 
