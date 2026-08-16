@@ -16,6 +16,7 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(px4_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
+find_package(std_msgs REQUIRED)
 find_package(eigen3_cmake_module REQUIRED)
 find_package(Eigen3 REQUIRED)
 
@@ -41,6 +42,13 @@ if(BUILD_TESTING)
   ament_add_gtest(test_velocity_reference test/test_velocity_reference.cpp)
   target_include_directories(test_velocity_reference PRIVATE include)
   target_link_libraries(test_velocity_reference Eigen3::Eigen)
+
+  ament_add_gtest(test_debounce test/test_debounce.cpp)
+  target_include_directories(test_debounce PRIVATE include)
+
+  ament_add_gtest(test_flow_monitor test/test_flow_monitor.cpp)
+  target_include_directories(test_flow_monitor PRIVATE include)
+  target_link_libraries(test_flow_monitor Eigen3::Eigen)
 endif()
 
 add_executable(gnss_monitor_node src/gnss_monitor_node.cpp)
@@ -48,7 +56,12 @@ target_include_directories(gnss_monitor_node PRIVATE include)
 target_link_libraries(gnss_monitor_node Eigen3::Eigen)
 ament_target_dependencies(gnss_monitor_node rclcpp px4_msgs geometry_msgs)
 
-install(TARGETS gnss_monitor_node
+add_executable(flow_monitor_node src/flow_monitor_node.cpp)
+target_include_directories(flow_monitor_node PRIVATE include)
+target_link_libraries(flow_monitor_node Eigen3::Eigen)
+ament_target_dependencies(flow_monitor_node rclcpp px4_msgs std_msgs)
+
+install(TARGETS gnss_monitor_node flow_monitor_node
   DESTINATION lib/${PROJECT_NAME})
 
 ament_package()
