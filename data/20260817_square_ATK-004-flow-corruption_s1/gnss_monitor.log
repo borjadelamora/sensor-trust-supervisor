@@ -1,0 +1,19 @@
+[INFO] [1786990651.861082570] [gnss_monitor]: gps velocity skipped: No Reference
+[INFO] [1786990657.960626194] [gnss_monitor]: imu sample rejected: Gap
+[INFO] [1786990657.987092470] [gnss_monitor]: gps interval too long to judge
+[INFO] [1786990657.987157920] [gnss_monitor]: gps velocity skipped: No Reference
+[INFO] [1786990661.969374485] [gnss_monitor]: gps velocity skipped: No Reference
+[INFO] [1786990661.989986468] [gnss_monitor]: imu sample rejected: Not Advanced
+[INFO] [1786990679.915876348] [gnss_monitor]: gps interval too long to judge
+[INFO] [1786990679.916093781] [gnss_monitor]: gps velocity skipped: No Reference
+[INFO] [1786990679.923664898] [gnss_monitor]: imu sample rejected: Stale Attitude
+[WARN] [1786990685.048505239] [gnss_monitor]: gps Suspect at 2.45 m/s
+[INFO] [1786990694.173936521] [gnss_monitor]: gps velocity skipped: No Reference
+[WARN] [1786990696.724540927] [gnss_monitor]: gps Trusted at 0.10 m/s
+[INFO] [1786990698.936200402] [gnss_monitor]: imu sample rejected: Not Advanced
+[INFO] [1786990698.951930036] [gnss_monitor]: gps interval too long to judge
+[INFO] [1786990698.991066020] [gnss_monitor]: gps velocity skipped: No Reference
+[INFO] [1786990715.200664141] [gnss_monitor]: gps velocity skipped: No Reference
+[INFO] [1786990719.722401041] [gnss_monitor]: imu sample rejected: Gap
+[INFO] [1786990719.757522243] [gnss_monitor]: gps interval too long to judge
+[INFO] [1786990719.757586990] [gnss_monitor]: gps velocity skipped: No Reference

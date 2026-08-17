@@ -1,0 +1,14 @@
+[INFO] [1786990437.948356365] [flow_monitor]: flow sample rejected: No Reference
+[INFO] [1786990443.799097942] [flow_monitor]: imu sample rejected: Gap
+[INFO] [1786990443.803519484] [flow_monitor]: flow sample rejected: No Reference
+[INFO] [1786990445.652374023] [flow_monitor]: flow sample rejected: No Reference
+[INFO] [1786990445.664477599] [flow_monitor]: imu sample rejected: Not Advanced
+[INFO] [1786990456.638914465] [flow_monitor]: flow sample rejected: No Reference
+[INFO] [1786990458.768114916] [flow_monitor]: imu sample rejected: Gap
+[INFO] [1786990458.780168992] [flow_monitor]: flow sample rejected: No Reference
+[INFO] [1786990472.662746940] [flow_monitor]: flow sample rejected: No Reference
+[INFO] [1786990475.520351297] [flow_monitor]: imu sample rejected: Gap
+[INFO] [1786990475.524369322] [flow_monitor]: flow sample rejected: No Reference
+[INFO] [1786990486.804575393] [flow_monitor]: flow sample rejected: No Reference
+[INFO] [1786990491.579498534] [flow_monitor]: imu sample rejected: Gap
+[INFO] [1786990491.592650134] [flow_monitor]: flow sample rejected: No Reference

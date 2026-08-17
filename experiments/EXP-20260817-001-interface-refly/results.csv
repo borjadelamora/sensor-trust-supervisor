@@ -1,0 +1,7 @@
+run,scenario,channel,attacked,peak_residual_mps,p50_residual_mps,p95_residual_mps,pre_onset_max_mps,threshold_mps,sustain_s,suspect_episodes,onset_to_suspect_s
+20260817_square_none_s1,none,gnss,false,0.497,0.174,0.416,,2.0,2.0,0,
+20260817_square_none_s1,none,flow,false,7.059,0.329,1.116,,1.0,2.0,0,
+20260817_square_ATK-001-gps-freeze_s1,ATK-001-gps-freeze,gnss,true,6.526,1.924,6.308,0.221,2.0,2.0,3,2.048
+20260817_square_ATK-001-gps-freeze_s1,ATK-001-gps-freeze,flow,false,5.624,0.472,1.635,,1.0,2.0,1,
+20260817_square_ATK-004-flow-corruption_s1,ATK-004-flow-corruption,gnss,false,2.601,0.235,2.481,,2.0,2.0,1,
+20260817_square_ATK-004-flow-corruption_s1,ATK-004-flow-corruption,flow,true,4.505,0.612,3.391,2.386,1.0,2.0,2,17.840
