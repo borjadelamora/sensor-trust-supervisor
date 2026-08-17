@@ -22,8 +22,8 @@ constexpr double kStepS = 0.01;
 constexpr uint8_t kFirstReset = 0;
 
 // Feeds all three streams at one stamp and hands back what the flow sample produced
-std::expected<double, FlowError> step(FlowMonitor& monitor, const VelocityNe& velocity,
-                                      double time_s)
+std::expected<double, ResidualError> step(FlowMonitor& monitor, const VelocityNe& velocity,
+                                          double time_s)
 {
   monitor.on_attitude(AttitudeSample{.attitude = kLevel, .time_s = time_s}, kFirstReset);
   static_cast<void>(monitor.on_imu(ImuSample{.acceleration = kLevelAtRest, .time_s = time_s}));
@@ -35,9 +35,9 @@ TEST(FlowMonitor, AnchorsOnTheFirstFlowSampleAndComparesAgainstTheNext)
 {
   FlowMonitor monitor(kReferenceLimits, kDebounceLimits);
 
-  EXPECT_EQ(step(monitor, VelocityNe{}, kStartS).error(), FlowError::kNoReference);
+  EXPECT_EQ(step(monitor, VelocityNe{}, kStartS).error(), ResidualError::kNoReference);
   EXPECT_TRUE(step(monitor, VelocityNe{}, kStartS + kStepS).has_value());
-  EXPECT_EQ(step(monitor, VelocityNe{}, kStartS + kStepS).error(), FlowError::kNotAdvanced);
+  EXPECT_EQ(step(monitor, VelocityNe{}, kStartS + kStepS).error(), ResidualError::kNotAdvanced);
 }
 
 // An ekf2 reset invalidates what was integrated, so the next sample has to anchor again
@@ -52,7 +52,7 @@ TEST(FlowMonitor, DropsTheReferenceWhenTheAttitudeResets)
 
   monitor.on_attitude(AttitudeSample{.attitude = kLevel, .time_s = reset_at_s}, kFirstReset + 1);
 
-  EXPECT_EQ(monitor.on_flow(FlowSample{.time_s = reset_at_s}).error(), FlowError::kNoReference);
+  EXPECT_EQ(monitor.on_flow(FlowSample{.time_s = reset_at_s}).error(), ResidualError::kNoReference);
 }
 
 TEST(FlowMonitor, TurnsSuspectAfterFlowDisagreesForTheSustainPeriod)
@@ -68,7 +68,7 @@ TEST(FlowMonitor, TurnsSuspectAfterFlowDisagreesForTheSustainPeriod)
   }
 
   EXPECT_EQ(monitor.level(), TrustLevel::kTrusted);
-  EXPECT_NEAR(monitor.judgement()->residual_mps, kDisagreeing.north_mps, 1e-9);
+  EXPECT_NEAR(monitor.judgement()->residual, kDisagreeing.north_mps, 1e-9);
 
   static_cast<void>(
       step(monitor, kDisagreeing, kStartS + (kStepS * static_cast<double>(kSustainedSteps + 1))));

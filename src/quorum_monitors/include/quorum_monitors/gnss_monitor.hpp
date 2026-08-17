@@ -3,10 +3,14 @@
 
 #include <cassert>
 #include <cmath>
+#include <cstdint>
 #include <expected>
 #include <numbers>
+#include <optional>
 #include <string_view>
 
+#include "quorum_monitors/debounce.hpp"
+#include "quorum_monitors/sensor_monitor.hpp"
 #include "quorum_monitors/velocity_reference.hpp"
 
 namespace quorum_monitors {
@@ -37,7 +41,7 @@ struct GateVerdict {
 };
 
 /// kTooSoon and kGap mean the interval was the wrong length to judge
-enum class GateError { kUnsetStamp, kNotAdvanced, kTooSoon, kGap };
+enum class GateError { kUnsetStamp, kNotAdvanced, kNoPreviousFix, kTooSoon, kGap };
 
 /// The interval bounds are seconds between the two fixes, not a window over many
 struct GateLimits {
@@ -62,6 +66,9 @@ constexpr double kEarthRadiusM = 6'371'000.0;
 
     case GateError::kNotAdvanced:
       return "Not Advanced";
+
+    case GateError::kNoPreviousFix:
+      return "No Previous Fix";
 
     case GateError::kTooSoon:
       return "Too Soon";
@@ -137,6 +144,86 @@ constexpr double kEarthRadiusM = 6'371'000.0;
                      .east_mps = gps.east_mps - reference.east_mps,
                      .down_mps = gps.down_mps - reference.down_mps};
 }
+
+/// Watches gps with a kinematic gate on the fix and a residual against dead reckoning
+class GnssMonitor final : public SensorMonitor {
+public:
+  GnssMonitor(GateLimits gate_limits, ReferenceLimits reference_limits,
+              DebounceLimits debounce_limits)
+      : limits_(gate_limits), reference_(reference_limits), debounce_(debounce_limits)
+  {}
+
+  [[nodiscard]] SensorId sensor_id() const noexcept override { return SensorId::kGnss; }
+
+  void on_attitude(const AttitudeSample& attitude, uint8_t reset_count) override
+  {
+    reference_.on_attitude(attitude, reset_count);
+  }
+
+  [[nodiscard]] std::expected<VelocityNed, ReferenceError> on_imu(const ImuSample& imu) override
+  {
+    return reference_.on_imu(imu);
+  }
+
+  [[nodiscard]] std::expected<GateVerdict, GateError> check_gate(const FixSample& current)
+  {
+    if (!last_fix_) {
+      last_fix_ = current;
+      return std::unexpected(GateError::kNoPreviousFix);
+    }
+
+    const std::expected<GateVerdict, GateError> result =
+        check_kinematic_gate(*last_fix_, current, limits_);
+
+    if (advances_reference(result)) {
+      last_fix_ = current;
+    }
+
+    return result;
+  }
+
+  [[nodiscard]] std::expected<VelocityNed, ResidualError> check_velocity(const VelocityNed& gps,
+                                                                         double time_s)
+  {
+    if (judgement_ && time_s <= judgement_->time_s) {
+      return std::unexpected(ResidualError::kNotAdvanced);
+    }
+
+    const std::expected<VelocityNed, ReferenceError> held = reference_.velocity(time_s);
+
+    if (!held) {
+      reference_.anchor(gps, time_s);
+
+      return std::unexpected(ResidualError::kNoReference);
+    }
+
+    const VelocityNed residual = velocity_residual(gps, *held);
+    const double residual_mps = std::hypot(residual.north_mps, residual.east_mps);
+    debounce_.update(residual_mps, time_s);
+    judgement_ = Judgement{.residual = residual_mps, .time_s = time_s};
+
+    return residual;
+  }
+
+  [[nodiscard]] TrustLevel level() const noexcept override { return debounce_.level(); }
+
+  [[nodiscard]] std::optional<Judgement> judgement() const noexcept override { return judgement_; }
+
+  void reset() noexcept override
+  {
+    last_fix_.reset();
+    reference_.reset();
+    debounce_.reset();
+    judgement_.reset();
+  }
+
+private:
+  GateLimits limits_;
+  std::optional<FixSample> last_fix_;
+  ReferenceFeed reference_;
+  Debounce debounce_;
+  std::optional<Judgement> judgement_;
+};
 
 }  // namespace quorum_monitors
 

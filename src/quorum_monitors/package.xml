@@ -14,6 +14,7 @@
   <depend>px4_msgs</depend>
   <depend>geometry_msgs</depend>
   <depend>std_msgs</depend>
+  <depend>quorum_msgs</depend>
   <depend>eigen</depend>
 
   <test_depend>ament_cmake_gtest</test_depend>

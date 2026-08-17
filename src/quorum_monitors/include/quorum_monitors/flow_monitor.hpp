@@ -5,9 +5,9 @@
 #include <cstdint>
 #include <expected>
 #include <optional>
-#include <string_view>
 
 #include "quorum_monitors/debounce.hpp"
+#include "quorum_monitors/sensor_monitor.hpp"
 #include "quorum_monitors/velocity_reference.hpp"
 
 namespace quorum_monitors {
@@ -23,21 +23,6 @@ struct FlowSample {
   double time_s{};
 };
 
-enum class FlowError { kNotAdvanced, kNoReference };
-
-[[nodiscard]] constexpr std::string_view to_string(FlowError error)
-{
-  switch (error) {
-    case FlowError::kNotAdvanced:
-      return "Not Advanced";
-
-    case FlowError::kNoReference:
-      return "No Reference";
-  }
-
-  return "Unknown Flow Error";
-}
-
 /// How far flow's velocity sits from the dead-reckoned one
 [[nodiscard]] inline double horizontal_residual_mps(const VelocityNe& flow,
                                                     const VelocityNed& reference)
@@ -45,39 +30,29 @@ enum class FlowError { kNotAdvanced, kNoReference };
   return std::hypot(flow.north_mps - reference.north_mps, flow.east_mps - reference.east_mps);
 }
 
-class FlowMonitor final {
+/// Watches optical flow against a reference anchored on the flow it is fed
+class FlowMonitor final : public SensorMonitor {
 public:
-  struct Judgement {
-    double residual_mps{};
-    double time_s{};
-  };
-
   FlowMonitor(ReferenceLimits reference_limits, DebounceLimits debounce_limits)
       : reference_(reference_limits), debounce_(debounce_limits)
   {}
 
-  void on_attitude(const AttitudeSample& attitude, uint8_t reset_count)
-  {
-    if (attitude_ && attitude_->reset_count != reset_count) {
-      reference_.reset();
-    }
+  [[nodiscard]] SensorId sensor_id() const noexcept override { return SensorId::kFlow; }
 
-    attitude_ = AttitudeState{.sample = attitude, .reset_count = reset_count};
+  void on_attitude(const AttitudeSample& attitude, uint8_t reset_count) override
+  {
+    reference_.on_attitude(attitude, reset_count);
   }
 
-  [[nodiscard]] std::expected<VelocityNed, ReferenceError> on_imu(const ImuSample& imu)
+  [[nodiscard]] std::expected<VelocityNed, ReferenceError> on_imu(const ImuSample& imu) override
   {
-    if (!attitude_) {
-      return std::unexpected(ReferenceError::kNoAttitude);
-    }
-
-    return reference_.advance(imu, attitude_->sample);
+    return reference_.on_imu(imu);
   }
 
-  [[nodiscard]] std::expected<double, FlowError> on_flow(const FlowSample& flow)
+  [[nodiscard]] std::expected<double, ResidualError> on_flow(const FlowSample& flow)
   {
     if (judgement_ && flow.time_s <= judgement_->time_s) {
-      return std::unexpected(FlowError::kNotAdvanced);
+      return std::unexpected(ResidualError::kNotAdvanced);
     }
 
     const std::expected<VelocityNed, ReferenceError> held = reference_.velocity(flow.time_s);
@@ -88,29 +63,30 @@ public:
           VelocityNed{.north_mps = flow.velocity.north_mps, .east_mps = flow.velocity.east_mps},
           flow.time_s);
 
-      return std::unexpected(FlowError::kNoReference);
+      return std::unexpected(ResidualError::kNoReference);
     }
 
     const double residual_mps = horizontal_residual_mps(flow.velocity, *held);
     debounce_.update(residual_mps, flow.time_s);
-    judgement_ = Judgement{.residual_mps = residual_mps, .time_s = flow.time_s};
+    judgement_ = Judgement{.residual = residual_mps, .time_s = flow.time_s};
 
     return residual_mps;
   }
 
-  [[nodiscard]] TrustLevel level() const noexcept { return debounce_.level(); }
+  [[nodiscard]] TrustLevel level() const noexcept override { return debounce_.level(); }
 
-  [[nodiscard]] std::optional<Judgement> judgement() const noexcept { return judgement_; }
+  [[nodiscard]] std::optional<Judgement> judgement() const noexcept override { return judgement_; }
+
+  void reset() noexcept override
+  {
+    reference_.reset();
+    debounce_.reset();
+    judgement_.reset();
+  }
 
 private:
-  struct AttitudeState {
-    AttitudeSample sample{};
-    uint8_t reset_count{};
-  };
-
-  VelocityReference reference_;
+  ReferenceFeed reference_;
   Debounce debounce_;
-  std::optional<AttitudeState> attitude_;
   std::optional<Judgement> judgement_;
 };
 

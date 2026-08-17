@@ -1,18 +1,20 @@
+#include <cmath>
 #include <cstdint>
 #include <exception>
 #include <expected>
 #include <memory>
-#include <optional>
 #include <string_view>
 
 #include "geometry_msgs/msg/vector3_stamped.hpp"
 #include "px4_msgs/msg/sensor_combined.hpp"
 #include "px4_msgs/msg/sensor_gps.hpp"
 #include "px4_msgs/msg/vehicle_attitude.hpp"
+#include "quorum_msgs/msg/trust_report.hpp"
 #include "rclcpp/rclcpp.hpp"
 
 #include "quorum_monitors/gnss_monitor.hpp"
 #include "quorum_monitors/px4_time.hpp"
+#include "quorum_monitors/sensor_monitor.hpp"
 
 namespace quorum_monitors {
 
@@ -34,6 +36,12 @@ constexpr double kMaxAgeS = 10.0;
 // Five intervals of the 50 Hz attitude stream
 constexpr double kMaxAttitudeAgeS = 0.1;
 
+// Above the 1.40 m/s benign ceiling EXP-20260815-001 measured, provisional until the battery
+constexpr double kThresholdMps = 2.0;
+
+// How long the residual has to stay above the threshold, provisional in the same way
+constexpr double kSustainS = 2.0;
+
 // px4 leaves a stamp it has not filled in at zero
 constexpr uint64_t kUnsetStampUs = 0;
 
@@ -45,15 +53,19 @@ class GnssMonitorNode final : public rclcpp::Node {
 public:
   GnssMonitorNode()
       : Node("gnss_monitor"),
-        limits_{.limit_mps = kKinematicLimitMps,
-                .min_interval_s = kMinIntervalS,
-                .max_interval_s = kMaxIntervalS},
-        reference_(ReferenceLimits{.max_gap_s = kMaxGapS,
-                                   .max_age_s = kMaxAgeS,
-                                   .max_attitude_age_s = kMaxAttitudeAgeS})
+        monitor_(GateLimits{.limit_mps = kKinematicLimitMps,
+                            .min_interval_s = kMinIntervalS,
+                            .max_interval_s = kMaxIntervalS},
+                 ReferenceLimits{.max_gap_s = kMaxGapS,
+                                 .max_age_s = kMaxAgeS,
+                                 .max_attitude_age_s = kMaxAttitudeAgeS},
+                 DebounceLimits{.threshold_mps = kThresholdMps, .sustain_s = kSustainS})
   {
     residual_publisher_ = this->create_publisher<geometry_msgs::msg::Vector3Stamped>(
         "/quorum/gnss_residual", kResidualQueueDepth);
+
+    trust_publisher_ = this->create_publisher<quorum_msgs::msg::TrustReport>("/quorum/trust/gnss",
+                                                                             kResidualQueueDepth);
 
     gps_subscription_ = this->create_subscription<px4_msgs::msg::SensorGps>(
         "/quorum/vehicle_gps_position", rclcpp::SensorDataQoS(),
@@ -85,30 +97,19 @@ private:
       return;
     }
 
-    // An ekf2 reset steps the quaternion, so whatever was integrated through it no longer holds
-    if (attitude_reset_count_ && *attitude_reset_count_ != msg.quat_reset_counter) {
-      reference_.reset();
-    }
-
-    attitude_reset_count_ = msg.quat_reset_counter;
-
     const Attitude attitude{.w = static_cast<double>(msg.q[0]),
                             .x = static_cast<double>(msg.q[1]),
                             .y = static_cast<double>(msg.q[2]),
                             .z = static_cast<double>(msg.q[3])};
 
-    attitude_ = AttitudeSample{.attitude = attitude, .time_s = seconds_from_micros(msg.timestamp)};
+    monitor_.on_attitude(
+        AttitudeSample{.attitude = attitude, .time_s = seconds_from_micros(msg.timestamp)},
+        msg.quat_reset_counter);
   }
 
   void on_imu(const px4_msgs::msg::SensorCombined& msg)
   {
     if (!stamped(msg.timestamp)) {
-      return;
-    }
-
-    // A silent skip here leaves the residual a gps difference
-    if (!attitude_) {
-      RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), kWarnThrottleMs, "no attitude yet");
       return;
     }
 
@@ -120,10 +121,11 @@ private:
         .down_mps2 = static_cast<double>(msg.accelerometer_m_s2[2])};
 
     const std::expected<VelocityNed, ReferenceError> result =
-        reference_.advance(ImuSample{.acceleration = acceleration, .time_s = time_s}, *attitude_);
+        monitor_.on_imu(ImuSample{.acceleration = acceleration, .time_s = time_s});
 
     // Before the first fix there is nothing to anchor on, which is not worth reporting
-    if (result.has_value() || result.error() == ReferenceError::kNoAnchor) {
+    if (result.has_value() || result.error() == ReferenceError::kNoAnchor ||
+        result.error() == ReferenceError::kNoAttitude) {
       return;
     }
 
@@ -142,25 +144,8 @@ private:
                                                     .longitude_deg = msg.longitude_deg},
                             .time_s = seconds_from_micros(msg.timestamp)};
 
-    check_gate(current);
+    report(monitor_.check_gate(current));
     check_velocity(msg, current.time_s);
-  }
-
-  void check_gate(const FixSample& current)
-  {
-    if (!last_fix_) {
-      last_fix_ = current;
-      return;
-    }
-
-    const std::expected<GateVerdict, GateError> result =
-        check_kinematic_gate(*last_fix_, current, limits_);
-
-    report(result);
-
-    if (advances_reference(result)) {
-      last_fix_ = current;
-    }
   }
 
   void check_velocity(const px4_msgs::msg::SensorGps& msg, double time_s)
@@ -175,19 +160,22 @@ private:
                                    .east_mps = static_cast<double>(msg.vel_e_m_s),
                                    .down_mps = static_cast<double>(msg.vel_d_m_s)};
 
-    const std::expected<VelocityNed, ReferenceError> held = reference_.velocity(time_s);
+    const std::expected<VelocityNed, ResidualError> residual =
+        monitor_.check_velocity(gps_velocity, time_s);
 
-    // An anchor that aged out is replaced by the fix in hand
-    if (!held) {
-      const std::string_view reason = to_string(held.error());
-      RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), kWarnThrottleMs, "anchoring on gps: %.*s",
-                           static_cast<int>(reason.size()), reason.data());
-
-      reference_.anchor(gps_velocity, time_s);
+    if (!residual) {
+      const std::string_view reason = to_string(residual.error());
+      RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), kWarnThrottleMs,
+                           "gps velocity skipped: %.*s", static_cast<int>(reason.size()),
+                           reason.data());
       return;
     }
 
-    publish_residual(velocity_residual(gps_velocity, *held), msg.timestamp);
+    const double residual_mps = std::hypot(residual->north_mps, residual->east_mps);
+
+    publish_residual(*residual, msg.timestamp);
+    publish_trust(residual_mps, msg.timestamp);
+    report_level(residual_mps);
   }
 
   void publish_residual(const VelocityNed& residual, uint64_t stamp_us)
@@ -203,6 +191,47 @@ private:
     residual_publisher_->publish(message);
   }
 
+  void publish_trust(double residual_mps, uint64_t stamp_us)
+  {
+    quorum_msgs::msg::TrustReport message;
+
+    message.stamp = rclcpp::Time{static_cast<int64_t>(stamp_us) * 1000};
+    message.sensor = quorum_msgs::msg::TrustReport::SENSOR_GNSS;
+    message.level = level_constant(monitor_.level());
+    message.residual = residual_mps;
+
+    trust_publisher_->publish(message);
+  }
+
+  [[nodiscard]] static uint8_t level_constant(TrustLevel level)
+  {
+    switch (level) {
+      case TrustLevel::kTrusted:
+        return quorum_msgs::msg::TrustReport::LEVEL_TRUSTED;
+
+      case TrustLevel::kSuspect:
+        return quorum_msgs::msg::TrustReport::LEVEL_SUSPECT;
+    }
+
+    return quorum_msgs::msg::TrustReport::LEVEL_TRUSTED;
+  }
+
+  // Every transition is worth a line, so this one is not throttled
+  void report_level(double residual_mps)
+  {
+    const TrustLevel level = monitor_.level();
+
+    if (level == last_level_) {
+      return;
+    }
+
+    last_level_ = level;
+
+    const std::string_view named = to_string(level);
+    RCLCPP_WARN(get_logger(), "gps %.*s at %.2f m/s", static_cast<int>(named.size()), named.data(),
+                residual_mps);
+  }
+
   void report(const std::expected<GateVerdict, GateError>& result)
   {
     if (result.has_value()) {
@@ -210,12 +239,13 @@ private:
       if (verdict.exceeded) {
         RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), kWarnThrottleMs,
                              "gps %.1f m/s over %.2f s, limit %.1f", verdict.speed_mps,
-                             verdict.dt_s, limits_.limit_mps);
+                             verdict.dt_s, kKinematicLimitMps);
       }
       return;
     }
 
     switch (result.error()) {
+      case GateError::kNoPreviousFix:
       case GateError::kTooSoon:
         break;
 
@@ -234,15 +264,13 @@ private:
     }
   }
 
-  GateLimits limits_;
-  VelocityReference reference_;
-  std::optional<FixSample> last_fix_;
-  std::optional<AttitudeSample> attitude_;
-  std::optional<uint8_t> attitude_reset_count_;
+  GnssMonitor monitor_;
   rclcpp::Publisher<geometry_msgs::msg::Vector3Stamped>::SharedPtr residual_publisher_;
+  rclcpp::Publisher<quorum_msgs::msg::TrustReport>::SharedPtr trust_publisher_;
   rclcpp::Subscription<px4_msgs::msg::SensorGps>::SharedPtr gps_subscription_;
   rclcpp::Subscription<px4_msgs::msg::SensorCombined>::SharedPtr imu_subscription_;
   rclcpp::Subscription<px4_msgs::msg::VehicleAttitude>::SharedPtr attitude_subscription_;
+  TrustLevel last_level_{TrustLevel::kTrusted};
 };
 
 }  // namespace quorum_monitors

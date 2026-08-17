@@ -3,6 +3,7 @@
 
 #include <cassert>
 #include <cmath>
+#include <cstdint>
 #include <expected>
 #include <optional>
 #include <string_view>
@@ -121,8 +122,8 @@ constexpr double kGravityMps2 = 9.8;
                      .down_mps = previous.down_mps + acceleration.down_mps2 * dt_s};
 }
 
-/// Velocity dead-reckoned from a gps anchor, held whole or not at all
-class VelocityReference {
+/// Velocity dead-reckoned from an anchor, held whole or not at all
+class VelocityReference final {
 public:
   explicit VelocityReference(ReferenceLimits limits) : limits_(limits)
   {
@@ -195,6 +196,52 @@ private:
 
   ReferenceLimits limits_;
   std::optional<Estimate> estimate_;
+};
+
+/// A velocity reference that holds the attitude it advances against
+class ReferenceFeed {
+public:
+  explicit ReferenceFeed(ReferenceLimits limits) : reference_(limits) {}
+
+  void on_attitude(const AttitudeSample& attitude, uint8_t reset_count)
+  {
+    if (attitude_ && attitude_->reset_count != reset_count) {
+      reference_.reset();
+    }
+
+    attitude_ = AttitudeState{.sample = attitude, .reset_count = reset_count};
+  }
+
+  [[nodiscard]] std::expected<VelocityNed, ReferenceError> on_imu(const ImuSample& imu)
+  {
+    if (!attitude_) {
+      return std::unexpected(ReferenceError::kNoAttitude);
+    }
+
+    return reference_.advance(imu, attitude_->sample);
+  }
+
+  [[nodiscard]] std::expected<VelocityNed, ReferenceError> velocity(double now_s) const
+  {
+    return reference_.velocity(now_s);
+  }
+
+  void anchor(VelocityNed velocity, double time_s) { reference_.anchor(velocity, time_s); }
+
+  void reset()
+  {
+    reference_.reset();
+    attitude_.reset();
+  }
+
+private:
+  struct AttitudeState {
+    AttitudeSample sample{};
+    uint8_t reset_count{};
+  };
+
+  VelocityReference reference_;
+  std::optional<AttitudeState> attitude_;
 };
 
 }  // namespace quorum_monitors

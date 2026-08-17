@@ -2,17 +2,18 @@
 #include <exception>
 #include <expected>
 #include <memory>
-#include <optional>
 #include <string_view>
 
 #include "px4_msgs/msg/sensor_combined.hpp"
 #include "px4_msgs/msg/vehicle_attitude.hpp"
 #include "px4_msgs/msg/vehicle_optical_flow_vel.hpp"
+#include "quorum_msgs/msg/trust_report.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "std_msgs/msg/float64.hpp"
 
 #include "quorum_monitors/flow_monitor.hpp"
 #include "quorum_monitors/px4_time.hpp"
+#include "quorum_monitors/sensor_monitor.hpp"
 
 namespace quorum_monitors {
 
@@ -49,6 +50,9 @@ public:
   {
     residual_publisher_ = this->create_publisher<std_msgs::msg::Float64>("/quorum/flow_residual",
                                                                          kResidualQueueDepth);
+
+    trust_publisher_ = this->create_publisher<quorum_msgs::msg::TrustReport>("/quorum/trust/flow",
+                                                                             kResidualQueueDepth);
 
     flow_subscription_ = this->create_subscription<px4_msgs::msg::VehicleOpticalFlowVel>(
         "/quorum/vehicle_optical_flow_vel", rclcpp::SensorDataQoS(),
@@ -126,17 +130,19 @@ private:
     const VelocityNe velocity{.north_mps = static_cast<double>(msg.vel_ne[0]),
                               .east_mps = static_cast<double>(msg.vel_ne[1])};
 
-    const std::expected<double, FlowError> residual_mps = monitor_.on_flow(
+    const std::expected<double, ResidualError> residual_mps = monitor_.on_flow(
         FlowSample{.velocity = velocity, .time_s = seconds_from_micros(msg.timestamp)});
 
     if (!residual_mps) {
       const std::string_view reason = to_string(residual_mps.error());
-      RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), kWarnThrottleMs, "flow sample rejected: %.*s",
-                           static_cast<int>(reason.size()), reason.data());
+      RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), kWarnThrottleMs,
+                           "flow sample rejected: %.*s", static_cast<int>(reason.size()),
+                           reason.data());
       return;
     }
 
     publish_residual(*residual_mps);
+    publish_trust(*residual_mps, msg.timestamp);
     report_level(*residual_mps);
   }
 
@@ -146,6 +152,31 @@ private:
     message.data = residual_mps;
 
     residual_publisher_->publish(message);
+  }
+
+  void publish_trust(double residual_mps, uint64_t stamp_us)
+  {
+    quorum_msgs::msg::TrustReport message;
+
+    message.stamp = rclcpp::Time{static_cast<int64_t>(stamp_us) * 1000};
+    message.sensor = quorum_msgs::msg::TrustReport::SENSOR_FLOW;
+    message.level = level_constant(monitor_.level());
+    message.residual = residual_mps;
+
+    trust_publisher_->publish(message);
+  }
+
+  [[nodiscard]] static uint8_t level_constant(TrustLevel level)
+  {
+    switch (level) {
+      case TrustLevel::kTrusted:
+        return quorum_msgs::msg::TrustReport::LEVEL_TRUSTED;
+
+      case TrustLevel::kSuspect:
+        return quorum_msgs::msg::TrustReport::LEVEL_SUSPECT;
+    }
+
+    return quorum_msgs::msg::TrustReport::LEVEL_TRUSTED;
   }
 
   // Every transition is worth a line, so this one is not throttled
@@ -166,6 +197,7 @@ private:
 
   FlowMonitor monitor_;
   rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr residual_publisher_;
+  rclcpp::Publisher<quorum_msgs::msg::TrustReport>::SharedPtr trust_publisher_;
   rclcpp::Subscription<px4_msgs::msg::VehicleOpticalFlowVel>::SharedPtr flow_subscription_;
   rclcpp::Subscription<px4_msgs::msg::SensorCombined>::SharedPtr imu_subscription_;
   rclcpp::Subscription<px4_msgs::msg::VehicleAttitude>::SharedPtr attitude_subscription_;

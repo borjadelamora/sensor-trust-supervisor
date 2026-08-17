@@ -18,8 +18,7 @@ constexpr Attitude kNoseUp{.w = kHalfRootTwo, .y = kHalfRootTwo};
 // What a level accelerometer reads standing still
 constexpr AccelerationFrd kLevelAtRest{.down_mps2 = -kGravityMps2};
 
-constexpr ReferenceLimits kLimits{
-    .max_gap_s = 0.05, .max_age_s = 10.0, .max_attitude_age_s = 0.1};
+constexpr ReferenceLimits kLimits{.max_gap_s = 0.05, .max_age_s = 10.0, .max_attitude_age_s = 0.1};
 
 constexpr double kAnchoredAtS = 20.0;
 
