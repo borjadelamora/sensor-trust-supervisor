@@ -256,6 +256,7 @@ fi
 cd "$REPO"
 TOPICS=(
   /quorum/gnss_residual
+  /quorum/trust/gnss
   /fmu/out/vehicle_gps_position
   /fmu/out/sensor_combined
   /fmu/out/vehicle_attitude
@@ -277,6 +278,7 @@ if [ "$MODEL" = gz_x500_flow ]; then
     /quorum/sensor_optical_flow
     /quorum/distance_sensor
     /quorum/flow_residual
+    /quorum/trust/flow
     "$CAMERA_TOPIC"
     "$CAMERA_TWIN"
   )
