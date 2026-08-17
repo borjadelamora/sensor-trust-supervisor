@@ -21,8 +21,9 @@ things get built.
   /quorum/*         what the supervision layer reads
      |
      v
-  quorum_monitors   gnss_monitor: a physics gate on the fix, and a velocity residual
-     |              against dead reckoning
+  quorum_monitors   gnss_monitor: a physics gate on the fix and a velocity residual
+     |              flow_monitor: a velocity residual on the flow
+     |              both against dead reckoning, both publishing a trust report
      v
   (to come)         arbiter and behaviour tree
 ```
@@ -96,6 +97,38 @@ out of EKF2 rather than off a sensor, so it is not as independent of GPS as the 
 
 Attack onsets are counted in PX4's clock, from the first stamp the relay sees, so all three
 channels are timed against one reference.
+
+## The monitors
+
+Each monitor compares one sensor against an independent estimate of the same quantity. GNSS
+compares fix velocity against a velocity dead reckoned from the IMU, and bounds the speed two
+consecutive fixes imply against what the airframe can fly. Flow compares its velocity against a
+reference dead reckoned the same way, anchored on flow.
+
+Both hold a `Debounce`, which raises a level once the residual has disagreed with the level held
+for a whole sustain period. One agreeing sample clears the count.
+
+`SensorMonitor` is what the two share: name the sensor, take an attitude, advance the reference,
+report the level, report the last judgement, reset. Judging a sample stays off it, since a fix
+and a flow reading are different types with different failure modes. Each monitor keeps its own
+typed entry point.
+
+| Topic | Rate | Carries |
+|---|---|---|
+| `/quorum/gnss_residual` | 30 Hz | GPS velocity minus dead reckoning, in NED |
+| `/quorum/flow_residual` | 45 Hz | flow's horizontal disagreement, in m/s |
+| `/quorum/trust/gnss` | 30 Hz | `TrustReport`: sensor, level, residual, stamp |
+| `/quorum/trust/flow` | 45 Hz | the same, for flow |
+
+A monitor publishes a level and the residual behind it. The arbiter owns the vote, the third
+state and the hysteresis, so a level is an opinion it can overrule.
+
+Two limits are measured. The residual carries only what changed since its anchor, and the anchor
+is retaken when it ages out, so a settled bias goes invisible
+([EXP-20260815-001](../experiments/EXP-20260815-001-gnss-velocity-residual/FINDINGS.md)). And a
+level says the sensor and the reference disagree without saying which moved, so a monitor can
+raise one while its own sensor is clean
+([EXP-20260817-001](../experiments/EXP-20260817-001-interface-refly/FINDINGS.md)).
 
 ## Frames
 
