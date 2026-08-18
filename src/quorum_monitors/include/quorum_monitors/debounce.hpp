@@ -12,7 +12,7 @@ enum class TrustLevel { kTrusted, kSuspect };
 
 /// The residual a sensor is suspect above, and how long it has to stay there to count
 struct DebounceLimits {
-  double threshold_mps{};
+  double threshold{};
   double sustain_s{};
 };
 
@@ -34,15 +34,15 @@ class Debounce final {
 public:
   explicit Debounce(DebounceLimits limits) : limits_{limits}
   {
-    assert(limits.threshold_mps > 0.0);
+    assert(limits.threshold > 0.0);
     assert(limits.sustain_s > 0.0);
   }
 
-  void update(double residual_mps, double time_s)
+  void update(double residual, double time_s)
   {
     assert(time_s > 0.0);
 
-    const TrustLevel implied = implied_level(residual_mps);
+    const TrustLevel implied = implied_level(residual);
 
     if (implied == level_) {
       crossed_at_s_.reset();
@@ -69,9 +69,9 @@ public:
   [[nodiscard]] TrustLevel level() const noexcept { return level_; }
 
 private:
-  [[nodiscard]] TrustLevel implied_level(double residual_mps) const
+  [[nodiscard]] TrustLevel implied_level(double residual) const
   {
-    return residual_mps > limits_.threshold_mps ? TrustLevel::kSuspect : TrustLevel::kTrusted;
+    return residual > limits_.threshold ? TrustLevel::kSuspect : TrustLevel::kTrusted;
   }
 
   DebounceLimits limits_;

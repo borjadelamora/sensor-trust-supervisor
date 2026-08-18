@@ -1,13 +1,10 @@
 #ifndef QUORUM_MONITORS__SENSOR_MONITOR_HPP_
 #define QUORUM_MONITORS__SENSOR_MONITOR_HPP_
 
-#include <cstdint>
-#include <expected>
 #include <optional>
 #include <string_view>
 
 #include "quorum_monitors/debounce.hpp"
-#include "quorum_monitors/velocity_reference.hpp"
 
 namespace quorum_monitors {
 
@@ -47,10 +44,6 @@ public:
   SensorMonitor& operator=(SensorMonitor&&) = delete;
 
   [[nodiscard]] virtual SensorId sensor_id() const noexcept = 0;
-
-  virtual void on_attitude(const AttitudeSample& attitude, uint8_t reset_count) = 0;
-
-  [[nodiscard]] virtual std::expected<VelocityNed, ReferenceError> on_imu(const ImuSample& imu) = 0;
 
   [[nodiscard]] virtual TrustLevel level() const noexcept = 0;
 

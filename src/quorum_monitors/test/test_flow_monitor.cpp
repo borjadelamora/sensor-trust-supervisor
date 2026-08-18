@@ -8,7 +8,7 @@ namespace {
 constexpr ReferenceLimits kReferenceLimits{
     .max_gap_s = 0.05, .max_age_s = 10.0, .max_attitude_age_s = 0.1};
 
-constexpr DebounceLimits kDebounceLimits{.threshold_mps = 1.0, .sustain_s = 2.0};
+constexpr DebounceLimits kDebounceLimits{.threshold = 1.0, .sustain_s = 2.0};
 
 constexpr Attitude kLevel{.w = 1.0};
 

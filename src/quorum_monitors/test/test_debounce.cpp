@@ -5,7 +5,7 @@
 namespace quorum_monitors {
 namespace {
 
-constexpr DebounceLimits kLimits{.threshold_mps = 1.0, .sustain_s = 2.0};
+constexpr DebounceLimits kLimits{.threshold = 1.0, .sustain_s = 2.0};
 
 constexpr double kOverMps = 1.5;
 constexpr double kUnderMps = 0.5;

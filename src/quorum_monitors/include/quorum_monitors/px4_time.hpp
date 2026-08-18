@@ -5,6 +5,9 @@
 
 namespace quorum_monitors {
 
+// px4 leaves a stamp it has not filled in at zero
+constexpr uint64_t kUnsetStampUs = 0;
+
 [[nodiscard]] constexpr double seconds_from_micros(uint64_t micros)
 {
   return static_cast<double>(micros) / 1e6;

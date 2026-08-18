@@ -17,7 +17,7 @@ constexpr ReferenceLimits kReferenceLimits{
     .max_gap_s = 0.05, .max_age_s = 10.0, .max_attitude_age_s = 0.1};
 
 // Above the 1.40 m/s benign ceiling EXP-20260815-001 measured
-constexpr DebounceLimits kDebounceLimits{.threshold_mps = 2.0, .sustain_s = 2.0};
+constexpr DebounceLimits kDebounceLimits{.threshold = 2.0, .sustain_s = 2.0};
 
 constexpr Attitude kLevel{.w = 1.0};
 

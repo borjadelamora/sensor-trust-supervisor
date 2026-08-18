@@ -15,6 +15,7 @@
 #include "quorum_monitors/gnss_monitor.hpp"
 #include "quorum_monitors/px4_time.hpp"
 #include "quorum_monitors/sensor_monitor.hpp"
+#include "quorum_monitors/trust_publishing.hpp"
 
 namespace quorum_monitors {
 
@@ -42,13 +43,6 @@ constexpr double kThresholdMps = 2.0;
 // How long the residual has to stay above the threshold, provisional in the same way
 constexpr double kSustainS = 2.0;
 
-// px4 leaves a stamp it has not filled in at zero
-constexpr uint64_t kUnsetStampUs = 0;
-
-constexpr int kResidualQueueDepth = 10;
-
-constexpr int kWarnThrottleMs = 1000;
-
 class GnssMonitorNode final : public rclcpp::Node {
 public:
   GnssMonitorNode()
@@ -59,13 +53,13 @@ public:
                  ReferenceLimits{.max_gap_s = kMaxGapS,
                                  .max_age_s = kMaxAgeS,
                                  .max_attitude_age_s = kMaxAttitudeAgeS},
-                 DebounceLimits{.threshold_mps = kThresholdMps, .sustain_s = kSustainS})
+                 DebounceLimits{.threshold = kThresholdMps, .sustain_s = kSustainS})
   {
     residual_publisher_ = this->create_publisher<geometry_msgs::msg::Vector3Stamped>(
-        "/quorum/gnss_residual", kResidualQueueDepth);
+        "/quorum/gnss_residual", kQueueDepth);
 
-    trust_publisher_ = this->create_publisher<quorum_msgs::msg::TrustReport>("/quorum/trust/gnss",
-                                                                             kResidualQueueDepth);
+    trust_publisher_ =
+        this->create_publisher<quorum_msgs::msg::TrustReport>("/quorum/trust/gnss", kQueueDepth);
 
     gps_subscription_ = this->create_subscription<px4_msgs::msg::SensorGps>(
         "/quorum/vehicle_gps_position", rclcpp::SensorDataQoS(),
@@ -87,7 +81,7 @@ private:
       return true;
     }
 
-    RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), kWarnThrottleMs, "px4 stamp not set");
+    RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), kLogThrottleMs, "px4 stamp not set");
     return false;
   }
 
@@ -130,7 +124,7 @@ private:
     }
 
     const std::string_view reason = to_string(result.error());
-    RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), kWarnThrottleMs, "imu sample rejected: %.*s",
+    RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), kLogThrottleMs, "imu sample rejected: %.*s",
                          static_cast<int>(reason.size()), reason.data());
   }
 
@@ -151,7 +145,7 @@ private:
   void check_velocity(const px4_msgs::msg::SensorGps& msg, double time_s)
   {
     if (!msg.vel_ned_valid) {
-      RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), kWarnThrottleMs,
+      RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), kLogThrottleMs,
                            "gps fix carries no velocity");
       return;
     }
@@ -165,9 +159,8 @@ private:
 
     if (!residual) {
       const std::string_view reason = to_string(residual.error());
-      RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), kWarnThrottleMs,
-                           "gps velocity skipped: %.*s", static_cast<int>(reason.size()),
-                           reason.data());
+      RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), kLogThrottleMs, "gps velocity skipped: %.*s",
+                           static_cast<int>(reason.size()), reason.data());
       return;
     }
 
@@ -182,8 +175,7 @@ private:
   {
     geometry_msgs::msg::Vector3Stamped message;
 
-    // rclcpp::Time counts nanoseconds
-    message.header.stamp = rclcpp::Time{static_cast<int64_t>(stamp_us) * 1000};
+    message.header.stamp = stamp_from_micros(stamp_us);
     message.vector.x = residual.north_mps;
     message.vector.y = residual.east_mps;
     message.vector.z = residual.down_mps;
@@ -195,7 +187,7 @@ private:
   {
     quorum_msgs::msg::TrustReport message;
 
-    message.stamp = rclcpp::Time{static_cast<int64_t>(stamp_us) * 1000};
+    message.stamp = stamp_from_micros(stamp_us);
     message.sensor = quorum_msgs::msg::TrustReport::SENSOR_GNSS;
     message.level = level_constant(monitor_.level());
     message.residual = residual_mps;
@@ -203,29 +195,14 @@ private:
     trust_publisher_->publish(message);
   }
 
-  [[nodiscard]] static uint8_t level_constant(TrustLevel level)
-  {
-    switch (level) {
-      case TrustLevel::kTrusted:
-        return quorum_msgs::msg::TrustReport::LEVEL_TRUSTED;
-
-      case TrustLevel::kSuspect:
-        return quorum_msgs::msg::TrustReport::LEVEL_SUSPECT;
-    }
-
-    return quorum_msgs::msg::TrustReport::LEVEL_TRUSTED;
-  }
-
   // Every transition is worth a line, so this one is not throttled
   void report_level(double residual_mps)
   {
     const TrustLevel level = monitor_.level();
 
-    if (level == last_level_) {
+    if (!transitions_.changed(level)) {
       return;
     }
-
-    last_level_ = level;
 
     const std::string_view named = to_string(level);
     RCLCPP_WARN(get_logger(), "gps %.*s at %.2f m/s", static_cast<int>(named.size()), named.data(),
@@ -237,7 +214,7 @@ private:
     if (result.has_value()) {
       const GateVerdict verdict = result.value();
       if (verdict.exceeded) {
-        RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), kWarnThrottleMs,
+        RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), kLogThrottleMs,
                              "gps %.1f m/s over %.2f s, limit %.1f", verdict.speed_mps,
                              verdict.dt_s, kKinematicLimitMps);
       }
@@ -250,14 +227,14 @@ private:
         break;
 
       case GateError::kGap:
-        RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), kWarnThrottleMs,
+        RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), kLogThrottleMs,
                              "gps interval too long to judge");
         break;
 
       case GateError::kUnsetStamp:
       case GateError::kNotAdvanced: {
         const std::string_view reason = to_string(result.error());
-        RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), kWarnThrottleMs, "gps fix rejected: %.*s",
+        RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), kLogThrottleMs, "gps fix rejected: %.*s",
                              static_cast<int>(reason.size()), reason.data());
         break;
       }
@@ -270,7 +247,7 @@ private:
   rclcpp::Subscription<px4_msgs::msg::SensorGps>::SharedPtr gps_subscription_;
   rclcpp::Subscription<px4_msgs::msg::SensorCombined>::SharedPtr imu_subscription_;
   rclcpp::Subscription<px4_msgs::msg::VehicleAttitude>::SharedPtr attitude_subscription_;
-  TrustLevel last_level_{TrustLevel::kTrusted};
+  LevelTransitions transitions_;
 };
 
 }  // namespace quorum_monitors

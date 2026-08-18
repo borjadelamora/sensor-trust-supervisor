@@ -14,6 +14,7 @@
 #include "quorum_monitors/flow_monitor.hpp"
 #include "quorum_monitors/px4_time.hpp"
 #include "quorum_monitors/sensor_monitor.hpp"
+#include "quorum_monitors/trust_publishing.hpp"
 
 namespace quorum_monitors {
 
@@ -32,13 +33,6 @@ constexpr double kThresholdMps = 1.0;
 // How long the residual has to stay above the threshold, provisional until the same battery
 constexpr double kSustainS = 2.0;
 
-// px4 leaves a stamp it has not filled in at zero
-constexpr uint64_t kUnsetStampUs = 0;
-
-constexpr int kResidualQueueDepth = 10;
-
-constexpr int kWarnThrottleMs = 1000;
-
 class FlowMonitorNode final : public rclcpp::Node {
 public:
   FlowMonitorNode()
@@ -46,13 +40,13 @@ public:
         monitor_(ReferenceLimits{.max_gap_s = kMaxGapS,
                                  .max_age_s = kMaxAgeS,
                                  .max_attitude_age_s = kMaxAttitudeAgeS},
-                 DebounceLimits{.threshold_mps = kThresholdMps, .sustain_s = kSustainS})
+                 DebounceLimits{.threshold = kThresholdMps, .sustain_s = kSustainS})
   {
-    residual_publisher_ = this->create_publisher<std_msgs::msg::Float64>("/quorum/flow_residual",
-                                                                         kResidualQueueDepth);
+    residual_publisher_ =
+        this->create_publisher<std_msgs::msg::Float64>("/quorum/flow_residual", kQueueDepth);
 
-    trust_publisher_ = this->create_publisher<quorum_msgs::msg::TrustReport>("/quorum/trust/flow",
-                                                                             kResidualQueueDepth);
+    trust_publisher_ =
+        this->create_publisher<quorum_msgs::msg::TrustReport>("/quorum/trust/flow", kQueueDepth);
 
     flow_subscription_ = this->create_subscription<px4_msgs::msg::VehicleOpticalFlowVel>(
         "/quorum/vehicle_optical_flow_vel", rclcpp::SensorDataQoS(),
@@ -74,7 +68,7 @@ private:
       return true;
     }
 
-    RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), kWarnThrottleMs, "px4 stamp not set");
+    RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), kLogThrottleMs, "px4 stamp not set");
     return false;
   }
 
@@ -117,7 +111,7 @@ private:
     }
 
     const std::string_view reason = to_string(result.error());
-    RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), kWarnThrottleMs, "imu sample rejected: %.*s",
+    RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), kLogThrottleMs, "imu sample rejected: %.*s",
                          static_cast<int>(reason.size()), reason.data());
   }
 
@@ -135,9 +129,8 @@ private:
 
     if (!residual_mps) {
       const std::string_view reason = to_string(residual_mps.error());
-      RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), kWarnThrottleMs,
-                           "flow sample rejected: %.*s", static_cast<int>(reason.size()),
-                           reason.data());
+      RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), kLogThrottleMs, "flow sample rejected: %.*s",
+                           static_cast<int>(reason.size()), reason.data());
       return;
     }
 
@@ -158,7 +151,7 @@ private:
   {
     quorum_msgs::msg::TrustReport message;
 
-    message.stamp = rclcpp::Time{static_cast<int64_t>(stamp_us) * 1000};
+    message.stamp = stamp_from_micros(stamp_us);
     message.sensor = quorum_msgs::msg::TrustReport::SENSOR_FLOW;
     message.level = level_constant(monitor_.level());
     message.residual = residual_mps;
@@ -166,29 +159,14 @@ private:
     trust_publisher_->publish(message);
   }
 
-  [[nodiscard]] static uint8_t level_constant(TrustLevel level)
-  {
-    switch (level) {
-      case TrustLevel::kTrusted:
-        return quorum_msgs::msg::TrustReport::LEVEL_TRUSTED;
-
-      case TrustLevel::kSuspect:
-        return quorum_msgs::msg::TrustReport::LEVEL_SUSPECT;
-    }
-
-    return quorum_msgs::msg::TrustReport::LEVEL_TRUSTED;
-  }
-
   // Every transition is worth a line, so this one is not throttled
   void report_level(double residual_mps)
   {
     const TrustLevel level = monitor_.level();
 
-    if (level == last_level_) {
+    if (!transitions_.changed(level)) {
       return;
     }
-
-    last_level_ = level;
 
     const std::string_view named = to_string(level);
     RCLCPP_WARN(get_logger(), "flow %.*s at %.2f m/s", static_cast<int>(named.size()), named.data(),
@@ -201,7 +179,7 @@ private:
   rclcpp::Subscription<px4_msgs::msg::VehicleOpticalFlowVel>::SharedPtr flow_subscription_;
   rclcpp::Subscription<px4_msgs::msg::SensorCombined>::SharedPtr imu_subscription_;
   rclcpp::Subscription<px4_msgs::msg::VehicleAttitude>::SharedPtr attitude_subscription_;
-  TrustLevel last_level_{TrustLevel::kTrusted};
+  LevelTransitions transitions_;
 };
 
 }  // namespace quorum_monitors

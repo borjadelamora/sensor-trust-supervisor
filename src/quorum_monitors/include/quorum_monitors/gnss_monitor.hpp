@@ -155,12 +155,12 @@ public:
 
   [[nodiscard]] SensorId sensor_id() const noexcept override { return SensorId::kGnss; }
 
-  void on_attitude(const AttitudeSample& attitude, uint8_t reset_count) override
+  void on_attitude(const AttitudeSample& attitude, uint8_t reset_count)
   {
     reference_.on_attitude(attitude, reset_count);
   }
 
-  [[nodiscard]] std::expected<VelocityNed, ReferenceError> on_imu(const ImuSample& imu) override
+  [[nodiscard]] std::expected<VelocityNed, ReferenceError> on_imu(const ImuSample& imu)
   {
     return reference_.on_imu(imu);
   }
