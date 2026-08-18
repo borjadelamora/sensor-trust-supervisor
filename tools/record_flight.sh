@@ -58,6 +58,7 @@ RELAY_PID=""
 BRIDGE_PID=""
 GNSS_MONITOR_PID=""
 FLOW_MONITOR_PID=""
+CAMERA_MONITOR_PID=""
 
 kill_stack() {
   pkill -9 -f ninja || true
@@ -67,10 +68,12 @@ kill_stack() {
   kill -9 "$BRIDGE_PID" 2>/dev/null || true
   kill -9 "$GNSS_MONITOR_PID" 2>/dev/null || true
   kill -9 "$FLOW_MONITOR_PID" 2>/dev/null || true
+  kill -9 "$CAMERA_MONITOR_PID" 2>/dev/null || true
   pkill -9 -f MicroXRCEAgent || true
   pkill -9 -f relay_node || true
   pkill -9 -f gnss_monitor_node || true
   pkill -9 -f flow_monitor_node || true
+  pkill -9 -f camera_monitor_node || true
   pkill -9 -f parameter_bridge || true
   pkill -9 -f '[g]z sim' || true
   pkill -9 -f 'px4_sitl_default/bin/[p]x4' || true
@@ -233,10 +236,12 @@ while ! ros2 node list 2>/dev/null | grep -q '/gnss_monitor'; do
   fi
 done
 
-# Flow only exists on this airframe, so the monitor reading it has nothing to do otherwise
-FLOW_MONITOR_LOG=$(mktemp)
+# Flow and the lens it shares only exist on this airframe, so their monitors have nothing to read
 if [ "$MODEL" = gz_x500_flow ]; then
   echo "Starting the flow monitor..."
+
+  FLOW_MONITOR_LOG=$(mktemp)
+  CAMERA_MONITOR_LOG=$(mktemp)
 
   ros2 run quorum_monitors flow_monitor_node >"$FLOW_MONITOR_LOG" 2>&1 &
   FLOW_MONITOR_PID=$!
@@ -248,6 +253,22 @@ if [ "$MODEL" = gz_x500_flow ]; then
     if [ "$WAITED_S" -ge 20 ]; then
       echo "No flow monitor after ${WAITED_S}s"
       cat "$FLOW_MONITOR_LOG"
+      exit 2
+    fi
+  done
+
+  echo "Starting the camera monitor..."
+
+  ros2 run quorum_monitors camera_monitor_node >"$CAMERA_MONITOR_LOG" 2>&1 &
+  CAMERA_MONITOR_PID=$!
+
+  WAITED_S=0
+  while ! ros2 node list 2>/dev/null | grep -q '/camera_monitor'; do
+    sleep 1
+    WAITED_S=$((WAITED_S + 1))
+    if [ "$WAITED_S" -ge 20 ]; then
+      echo "No camera monitor after ${WAITED_S}s"
+      cat "$CAMERA_MONITOR_LOG"
       exit 2
     fi
   done
@@ -279,6 +300,8 @@ if [ "$MODEL" = gz_x500_flow ]; then
     /quorum/distance_sensor
     /quorum/flow_residual
     /quorum/trust/flow
+    /quorum/camera_residual
+    /quorum/trust/camera
     "$CAMERA_TOPIC"
     "$CAMERA_TWIN"
   )
@@ -331,6 +354,7 @@ mv "$GNSS_MONITOR_LOG" "$BAG_DIR/gnss_monitor.log"
 
 if [ "$MODEL" = gz_x500_flow ]; then
   mv "$FLOW_MONITOR_LOG" "$BAG_DIR/flow_monitor.log"
+  mv "$CAMERA_MONITOR_LOG" "$BAG_DIR/camera_monitor.log"
 fi
 
 echo "Finished $RUN with exit code $EXIT_CODE"
