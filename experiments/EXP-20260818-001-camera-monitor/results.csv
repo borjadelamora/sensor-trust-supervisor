@@ -1,0 +1,10 @@
+run,scenario,channel,attacked,unit,peak_residual,p50_residual,p95_residual,pre_onset_max,threshold,sustain_s,suspect_episodes,onset_to_crossing_s,onset_to_suspect_s
+20260818_square_none_s1,none,gnss,false,m/s,1.058,0.108,0.999,,2.0,2.0,0,,
+20260818_square_none_s1,none,flow,false,m/s,4.431,0.265,0.904,,1.0,2.0,0,,
+20260818_square_none_s1,none,camera,false,level,27.748,24.301,27.051,,55.0,0.5,0,,
+20260818_square_ATK-005-camera-blackout_s1,ATK-005-camera-blackout,gnss,false,m/s,1.33,0.195,1.259,,2.0,2.0,0,,
+20260818_square_ATK-005-camera-blackout_s1,ATK-005-camera-blackout,flow,true,m/s,5.667,0.637,4.711,2.169,1.0,2.0,2,0.0,12.659
+20260818_square_ATK-005-camera-blackout_s1,ATK-005-camera-blackout,camera,true,level,105.0,26.58,105.0,16.096,55.0,0.5,1,0.0,0.5
+20260818_square_ATK-011-camera-dazzle_s1,ATK-011-camera-dazzle,gnss,false,m/s,1.003,0.3,0.854,,2.0,2.0,0,,
+20260818_square_ATK-011-camera-dazzle_s1,ATK-011-camera-dazzle,flow,true,m/s,5.478,0.726,3.419,1.682,1.0,2.0,1,0.02,4.884
+20260818_square_ATK-011-camera-dazzle_s1,ATK-011-camera-dazzle,camera,true,level,150.0,26.645,150.0,16.084,55.0,0.5,1,2.08,2.58
