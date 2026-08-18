@@ -12,5 +12,5 @@ builtin_interfaces/Time stamp
 uint8 sensor
 uint8 level
 
-# Metres per second for gnss and flow, a mean pixel level for the camera
+# Metres per second for gnss and flow, pixel levels from the band centre for the camera
 float64 residual

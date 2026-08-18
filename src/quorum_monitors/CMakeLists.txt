@@ -14,9 +14,11 @@ endif()
 # find dependencies
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(builtin_interfaces REQUIRED)
 find_package(px4_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
+find_package(sensor_msgs REQUIRED)
 find_package(quorum_msgs REQUIRED)
 find_package(eigen3_cmake_module REQUIRED)
 find_package(Eigen3 REQUIRED)
@@ -50,19 +52,28 @@ if(BUILD_TESTING)
   ament_add_gtest(test_flow_monitor test/test_flow_monitor.cpp)
   target_include_directories(test_flow_monitor PRIVATE include)
   target_link_libraries(test_flow_monitor Eigen3::Eigen)
+
+  ament_add_gtest(test_camera_monitor test/test_camera_monitor.cpp)
+  target_include_directories(test_camera_monitor PRIVATE include)
 endif()
 
 add_executable(gnss_monitor_node src/gnss_monitor_node.cpp)
 target_include_directories(gnss_monitor_node PRIVATE include)
 target_link_libraries(gnss_monitor_node Eigen3::Eigen)
-ament_target_dependencies(gnss_monitor_node rclcpp px4_msgs geometry_msgs quorum_msgs)
+ament_target_dependencies(gnss_monitor_node rclcpp builtin_interfaces px4_msgs geometry_msgs
+  quorum_msgs)
 
 add_executable(flow_monitor_node src/flow_monitor_node.cpp)
 target_include_directories(flow_monitor_node PRIVATE include)
 target_link_libraries(flow_monitor_node Eigen3::Eigen)
-ament_target_dependencies(flow_monitor_node rclcpp px4_msgs std_msgs quorum_msgs)
+ament_target_dependencies(flow_monitor_node rclcpp builtin_interfaces px4_msgs std_msgs quorum_msgs)
 
-install(TARGETS gnss_monitor_node flow_monitor_node
+add_executable(camera_monitor_node src/camera_monitor_node.cpp)
+target_include_directories(camera_monitor_node PRIVATE include)
+ament_target_dependencies(camera_monitor_node rclcpp builtin_interfaces sensor_msgs std_msgs
+  quorum_msgs)
+
+install(TARGETS gnss_monitor_node flow_monitor_node camera_monitor_node
   DESTINATION lib/${PROJECT_NAME})
 
 ament_package()
