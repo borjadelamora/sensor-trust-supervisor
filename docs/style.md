@@ -44,7 +44,9 @@ Include guards are `QUORUM_OFFBOARD__MISSION_HPP_`: package, file, extension, in
 Test directories carry their own `.clang-tidy` switching the magic-number checks off, since
 literal coordinates are rather the point of a test.
 
-`colcon test` does not run clang-tidy, so it is the one check that has to be run by hand.
+`colcon test` does not run clang-tidy, so it is the one check that has to be run by hand. On this
+machine clang-tidy 14 segfaults inside `MatchFinder::matchAST` on the monitor nodes, so those
+files rest on the compiler warnings and the review instead.
 
 Formatting is settled by `.clang-format` alone. `ament_uncrustify` enforces a different brace
 and spacing style, so it is switched off in the package's tests rather than left failing.

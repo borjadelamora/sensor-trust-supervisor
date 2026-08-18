@@ -6,6 +6,7 @@ Terms used in the project.
 |---|---|
 | **Dead reckoning** | Carrying a velocity forward by integrating acceleration, starting from a value taken as known. It needs no GPS, which is what makes it a reference to check GPS against, and it drifts, which is what limits how long it stays one. |
 | **Debounce** | The rule that turns a residual into a trust level. The level changes only once the residual has disagreed with it for a whole sustain period, and a single agreeing sample restarts the count, so noise cannot flip a verdict. |
+| **Frame mean** | The average of every byte in a camera frame, on the 0 to 255 scale a byte carries. The three colour channels count alike, so a lens flooded black reads 0 and a saturated one reads 255, and a benign frame over baylands sits between 78 and 133 depending on altitude. |
 | **EKF / EKF2** | Extended Kalman filter. `EKF2` is PX4's state estimator, fusing GPS, IMU, barometer and optical flow into one position and velocity estimate. It assumes sensor errors are random and zero-mean, which is the assumption this project is about. |
 | **NED / ENU** | North-east-down and east-north-up. PX4 works in NED, so "up" is a negative number, while ROS conventionally works in ENU. Mixing them silently is the easiest way to fly into the ground. |
 | **Offboard mode** | The PX4 mode where setpoints come from an external computer rather than PX4's own mission planner. It stays active only while setpoints keep arriving at 2 Hz or better. |

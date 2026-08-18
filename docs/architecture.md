@@ -1,7 +1,7 @@
 # Architecture
 
 What the system looks like so far. This is a sketch: the offboard flight node, the attack
-injector and the first monitor exist, while the arbiter above them is still a plan. It grows as
+injector and the three monitors exist, while the arbiter above them is still a plan. It grows as
 things get built.
 
 ## Tiers
@@ -23,7 +23,8 @@ things get built.
      v
   quorum_monitors   gnss_monitor: a physics gate on the fix and a velocity residual
      |              flow_monitor: a velocity residual on the flow
-     |              both against dead reckoning, both publishing a trust report
+     |              camera_monitor: the frame mean against a band
+     |              each publishing a trust report
      v
   (to come)         arbiter and behaviour tree
 ```
@@ -100,25 +101,33 @@ channels are timed against one reference.
 
 ## The monitors
 
-Each monitor compares one sensor against an independent estimate of the same quantity. GNSS
-compares fix velocity against a velocity dead reckoned from the IMU, and bounds the speed two
-consecutive fixes imply against what the airframe can fly. Flow compares its velocity against a
-reference dead reckoned the same way, anchored on flow.
+GNSS compares fix velocity against a velocity dead reckoned from the IMU, and bounds the speed
+two consecutive fixes imply against what the airframe can fly. Flow compares its velocity against
+a reference dead reckoned the same way, anchored on flow.
 
-Both hold a `Debounce`, which raises a level once the residual has disagreed with the level held
-for a whole sustain period. One agreeing sample clears the count.
+The camera takes the mean of every byte in a frame and measures how far it sits from the centre
+of a band drawn from benign flights. That makes it a plausibility check, and it catches a lens
+that has gone dark or saturated. A held frame keeps its mean, so `CameraFreeze` reads as healthy.
 
-`SensorMonitor` is what the two share: name the sensor, take an attitude, advance the reference,
-report the level, report the last judgement, reset. Judging a sample stays off it, since a fix
-and a flow reading are different types with different failure modes. Each monitor keeps its own
-typed entry point.
+All three hold a `Debounce`, which raises a level once the residual has disagreed with the level
+held for a whole sustain period. One agreeing sample clears the count.
+
+`SensorMonitor` is the reporting contract: name the sensor, report the level, report the last
+judgement, reset. Each monitor keeps its own typed entry point for judging a sample, since a fix,
+a flow reading and a frame are different types with different failure modes. The two
+dead-reckoning feeds moved onto the velocity monitors themselves when the camera arrived.
 
 | Topic | Rate | Carries |
 |---|---|---|
 | `/quorum/gnss_residual` | 30 Hz | GPS velocity minus dead reckoning, in NED |
 | `/quorum/flow_residual` | 45 Hz | flow's horizontal disagreement, in m/s |
+| `/quorum/camera_residual` | 45 Hz | the frame mean, in pixel levels |
 | `/quorum/trust/gnss` | 30 Hz | `TrustReport`: sensor, level, residual, stamp |
 | `/quorum/trust/flow` | 45 Hz | the same, for flow |
+| `/quorum/trust/camera` | 45 Hz | the same, for the camera |
+
+The camera's stamp is Gazebo sim time where the other two are PX4 microseconds, so the arbiter
+judges camera staleness on arrival.
 
 A monitor publishes a level and the residual behind it. The arbiter owns the vote, the third
 state and the hysteresis, so a level is an opinion it can overrule.
@@ -129,6 +138,10 @@ is retaken when it ages out, so a settled bias goes invisible
 level says the sensor and the reference disagree without saying which moved, so a monitor can
 raise one while its own sensor is clean
 ([EXP-20260817-001](../experiments/EXP-20260817-001-interface-refly/FINDINGS.md)).
+
+The camera's band is a third. It comes from four benign flights on one seed, 10 168 frames
+spanning 77.79 to 133.21 and the battery is what will show whether other terrain sits inside it
+([EXP-20260818-001](../experiments/EXP-20260818-001-camera-monitor/FINDINGS.md)).
 
 ## Frames
 
