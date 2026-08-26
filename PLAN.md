@@ -2,7 +2,7 @@
 
 Goal: a working, measured demo of fail-operational UAV autonomy in simulation. A supervisor
 that notices when a sensor is lying, works out which one, and reconfigures navigation to
-keep the mission alive. Finish by **21 August 2026**.
+keep the mission alive.
 
 ## The idea
 
@@ -34,15 +34,15 @@ because it never consults an independent source. So the plan is a layer above th
 
 ## Milestones
 
-| | | by |
+| | | |
 |---|---|---|
-| M0 | Sim environment runs: SITL hovers, sensor topics publish | 23 Jul |
-| M1 | Scripted offboard missions plus a logged set of benign flights | 31 Jul |
-| M2 | Attack injector and three monitors publishing live residuals | 8 Aug |
-| M3 | Trust arbiter and behaviour tree; dual-attack scenario handled; tests green | 15 Aug |
-| M4 | Full evaluation battery, figures, report, demo video, repo public | 20 Aug |
+| M0 | Sim environment runs: SITL hovers, sensor topics publish | done |
+| M1 | Scripted offboard missions plus a logged set of benign flights | done |
+| M2 | Attack injector and three monitors publishing live residuals | done |
+| M3 | Trust arbiter and behaviour tree; dual-attack scenario handled; tests green | next |
+| M4 | Full evaluation battery, figures, report, demo video | open |
 
-Biggest risks: the sim stack on Apple silicon (M0 exists to settle this fast, with a cloud
-Linux VM as the fallback), and whether Gazebo's optical flow is good enough to be the third
-velocity source. If time runs short I cut attack modes and battery size, never the three-way
-voting or the evaluation.
+The two early risks are settled: the sim stack runs (on WSL2 in the end, ADR-0002) and
+Gazebo's optical flow is good enough to be the third velocity source, though only over
+textured ground (ADR-0003). If time runs short I cut attack modes and battery size, never
+the three-way voting or the evaluation.
