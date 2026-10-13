@@ -30,6 +30,9 @@ if(BUILD_TESTING)
   find_package(ament_cmake_gtest REQUIRED)
   ament_add_gtest(test_vote test/test_vote.cpp)
   target_include_directories(test_vote PRIVATE include)
+
+  ament_add_gtest(test_trust_state test/test_trust_state.cpp)
+  target_include_directories(test_trust_state PRIVATE include)
 endif()
 
 ament_package()
