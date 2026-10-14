@@ -14,6 +14,7 @@ endif()
 
 rosidl_generate_interfaces(${PROJECT_NAME}
   msg/TrustReport.msg
+  msg/TrustState.msg
   DEPENDENCIES builtin_interfaces)
 
 ament_package()
