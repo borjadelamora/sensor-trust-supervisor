@@ -6,9 +6,10 @@
 #include <expected>
 #include <optional>
 
+#include "quorum_common/velocity_reference.hpp"
+
 #include "quorum_monitors/debounce.hpp"
 #include "quorum_monitors/sensor_monitor.hpp"
-#include "quorum_monitors/velocity_reference.hpp"
 
 namespace quorum_monitors {
 
@@ -25,7 +26,7 @@ struct FlowSample {
 
 /// How far flow's velocity sits from the dead-reckoned one
 [[nodiscard]] inline double horizontal_residual_mps(const VelocityNe& flow,
-                                                    const VelocityNed& reference)
+                                                    const quorum_common::VelocityNed& reference)
 {
   return std::hypot(flow.north_mps - reference.north_mps, flow.east_mps - reference.east_mps);
 }
@@ -33,18 +34,19 @@ struct FlowSample {
 /// Watches optical flow against a reference anchored on the flow it is fed
 class FlowMonitor final : public SensorMonitor {
 public:
-  FlowMonitor(ReferenceLimits reference_limits, DebounceLimits debounce_limits)
+  FlowMonitor(quorum_common::ReferenceLimits reference_limits, DebounceLimits debounce_limits)
       : reference_(reference_limits), debounce_(debounce_limits)
   {}
 
   [[nodiscard]] SensorId sensor_id() const noexcept override { return SensorId::kFlow; }
 
-  void on_attitude(const AttitudeSample& attitude, uint8_t reset_count)
+  void on_attitude(const quorum_common::AttitudeSample& attitude, uint8_t reset_count)
   {
     reference_.on_attitude(attitude, reset_count);
   }
 
-  [[nodiscard]] std::expected<VelocityNed, ReferenceError> on_imu(const ImuSample& imu)
+  [[nodiscard]] std::expected<quorum_common::VelocityNed, quorum_common::ReferenceError> on_imu(
+      const quorum_common::ImuSample& imu)
   {
     return reference_.on_imu(imu);
   }
@@ -55,13 +57,14 @@ public:
       return std::unexpected(ResidualError::kNotAdvanced);
     }
 
-    const std::expected<VelocityNed, ReferenceError> held = reference_.velocity(flow.time_s);
+    const std::expected<quorum_common::VelocityNed, quorum_common::ReferenceError> held =
+        reference_.velocity(flow.time_s);
 
     if (!held) {
       // Flow never measured a vertical velocity, so the anchor starts at zero and integrates
-      reference_.anchor(
-          VelocityNed{.north_mps = flow.velocity.north_mps, .east_mps = flow.velocity.east_mps},
-          flow.time_s);
+      reference_.anchor(quorum_common::VelocityNed{.north_mps = flow.velocity.north_mps,
+                                                   .east_mps = flow.velocity.east_mps},
+                        flow.time_s);
 
       return std::unexpected(ResidualError::kNoReference);
     }
@@ -85,7 +88,7 @@ public:
   }
 
 private:
-  ReferenceFeed reference_;
+  quorum_common::ReferenceFeed reference_;
   Debounce debounce_;
   std::optional<Judgement> judgement_;
 };

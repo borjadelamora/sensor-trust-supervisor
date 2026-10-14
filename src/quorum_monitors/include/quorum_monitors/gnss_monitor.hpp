@@ -9,9 +9,10 @@
 #include <optional>
 #include <string_view>
 
+#include "quorum_common/velocity_reference.hpp"
+
 #include "quorum_monitors/debounce.hpp"
 #include "quorum_monitors/sensor_monitor.hpp"
-#include "quorum_monitors/velocity_reference.hpp"
 
 namespace quorum_monitors {
 
@@ -137,30 +138,31 @@ constexpr double kEarthRadiusM = 6'371'000.0;
 }
 
 /// gps minus the reference, keeping a bias at its own sign and bearing
-[[nodiscard]] inline VelocityNed velocity_residual(const VelocityNed& gps,
-                                                   const VelocityNed& reference)
+[[nodiscard]] inline quorum_common::VelocityNed velocity_residual(
+    const quorum_common::VelocityNed& gps, const quorum_common::VelocityNed& reference)
 {
-  return VelocityNed{.north_mps = gps.north_mps - reference.north_mps,
-                     .east_mps = gps.east_mps - reference.east_mps,
-                     .down_mps = gps.down_mps - reference.down_mps};
+  return quorum_common::VelocityNed{.north_mps = gps.north_mps - reference.north_mps,
+                                    .east_mps = gps.east_mps - reference.east_mps,
+                                    .down_mps = gps.down_mps - reference.down_mps};
 }
 
 /// Watches gps with a kinematic gate on the fix and a residual against dead reckoning
 class GnssMonitor final : public SensorMonitor {
 public:
-  GnssMonitor(GateLimits gate_limits, ReferenceLimits reference_limits,
+  GnssMonitor(GateLimits gate_limits, quorum_common::ReferenceLimits reference_limits,
               DebounceLimits debounce_limits)
       : limits_(gate_limits), reference_(reference_limits), debounce_(debounce_limits)
   {}
 
   [[nodiscard]] SensorId sensor_id() const noexcept override { return SensorId::kGnss; }
 
-  void on_attitude(const AttitudeSample& attitude, uint8_t reset_count)
+  void on_attitude(const quorum_common::AttitudeSample& attitude, uint8_t reset_count)
   {
     reference_.on_attitude(attitude, reset_count);
   }
 
-  [[nodiscard]] std::expected<VelocityNed, ReferenceError> on_imu(const ImuSample& imu)
+  [[nodiscard]] std::expected<quorum_common::VelocityNed, quorum_common::ReferenceError> on_imu(
+      const quorum_common::ImuSample& imu)
   {
     return reference_.on_imu(imu);
   }
@@ -182,14 +184,15 @@ public:
     return result;
   }
 
-  [[nodiscard]] std::expected<VelocityNed, ResidualError> check_velocity(const VelocityNed& gps,
-                                                                         double time_s)
+  [[nodiscard]] std::expected<quorum_common::VelocityNed, ResidualError> check_velocity(
+      const quorum_common::VelocityNed& gps, double time_s)
   {
     if (judgement_ && time_s <= judgement_->time_s) {
       return std::unexpected(ResidualError::kNotAdvanced);
     }
 
-    const std::expected<VelocityNed, ReferenceError> held = reference_.velocity(time_s);
+    const std::expected<quorum_common::VelocityNed, quorum_common::ReferenceError> held =
+        reference_.velocity(time_s);
 
     if (!held) {
       reference_.anchor(gps, time_s);
@@ -197,7 +200,7 @@ public:
       return std::unexpected(ResidualError::kNoReference);
     }
 
-    const VelocityNed residual = velocity_residual(gps, *held);
+    const quorum_common::VelocityNed residual = velocity_residual(gps, *held);
     const double residual_mps = std::hypot(residual.north_mps, residual.east_mps);
     debounce_.update(residual_mps, time_s);
     judgement_ = Judgement{.residual = residual_mps, .time_s = time_s};
@@ -220,7 +223,7 @@ public:
 private:
   GateLimits limits_;
   std::optional<FixSample> last_fix_;
-  ReferenceFeed reference_;
+  quorum_common::ReferenceFeed reference_;
   Debounce debounce_;
   std::optional<Judgement> judgement_;
 };

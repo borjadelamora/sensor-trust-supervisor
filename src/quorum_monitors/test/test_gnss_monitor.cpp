@@ -3,9 +3,20 @@
 #include <cmath>
 #include <cstdint>
 
+#include "quorum_common/velocity_reference.hpp"
+
 #include "quorum_monitors/gnss_monitor.hpp"
 
 namespace quorum_monitors {
+
+using quorum_common::AccelerationFrd;
+using quorum_common::Attitude;
+using quorum_common::AttitudeSample;
+using quorum_common::ImuSample;
+using quorum_common::kGravityMps2;
+using quorum_common::ReferenceLimits;
+using quorum_common::VelocityNed;
+
 namespace {
 
 // Baylands' origin, the world every recorded flight starts from

@@ -20,6 +20,7 @@ find_package(geometry_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(quorum_msgs REQUIRED)
+find_package(quorum_common REQUIRED)
 find_package(eigen3_cmake_module REQUIRED)
 find_package(Eigen3 REQUIRED)
 
@@ -40,18 +41,14 @@ if(BUILD_TESTING)
   ament_add_gtest(test_gnss_monitor test/test_gnss_monitor.cpp)
   target_include_directories(test_gnss_monitor PRIVATE include)
   # Eigen arrives as an imported target, which keeps its headers out of -Wconversion
-  target_link_libraries(test_gnss_monitor Eigen3::Eigen)
-
-  ament_add_gtest(test_velocity_reference test/test_velocity_reference.cpp)
-  target_include_directories(test_velocity_reference PRIVATE include)
-  target_link_libraries(test_velocity_reference Eigen3::Eigen)
+  target_link_libraries(test_gnss_monitor quorum_common::quorum_common Eigen3::Eigen)
 
   ament_add_gtest(test_debounce test/test_debounce.cpp)
   target_include_directories(test_debounce PRIVATE include)
 
   ament_add_gtest(test_flow_monitor test/test_flow_monitor.cpp)
   target_include_directories(test_flow_monitor PRIVATE include)
-  target_link_libraries(test_flow_monitor Eigen3::Eigen)
+  target_link_libraries(test_flow_monitor quorum_common::quorum_common Eigen3::Eigen)
 
   ament_add_gtest(test_camera_monitor test/test_camera_monitor.cpp)
   target_include_directories(test_camera_monitor PRIVATE include)
@@ -59,13 +56,13 @@ endif()
 
 add_executable(gnss_monitor_node src/gnss_monitor_node.cpp)
 target_include_directories(gnss_monitor_node PRIVATE include)
-target_link_libraries(gnss_monitor_node Eigen3::Eigen)
+target_link_libraries(gnss_monitor_node quorum_common::quorum_common Eigen3::Eigen)
 ament_target_dependencies(gnss_monitor_node rclcpp builtin_interfaces px4_msgs geometry_msgs
   quorum_msgs)
 
 add_executable(flow_monitor_node src/flow_monitor_node.cpp)
 target_include_directories(flow_monitor_node PRIVATE include)
-target_link_libraries(flow_monitor_node Eigen3::Eigen)
+target_link_libraries(flow_monitor_node quorum_common::quorum_common Eigen3::Eigen)
 ament_target_dependencies(flow_monitor_node rclcpp builtin_interfaces px4_msgs std_msgs quorum_msgs)
 
 add_executable(camera_monitor_node src/camera_monitor_node.cpp)

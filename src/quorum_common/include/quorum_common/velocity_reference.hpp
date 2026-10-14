@@ -1,5 +1,5 @@
-#ifndef QUORUM_MONITORS__VELOCITY_REFERENCE_HPP_
-#define QUORUM_MONITORS__VELOCITY_REFERENCE_HPP_
+#ifndef QUORUM_COMMON__VELOCITY_REFERENCE_HPP_
+#define QUORUM_COMMON__VELOCITY_REFERENCE_HPP_
 
 #include <cassert>
 #include <cmath>
@@ -10,7 +10,7 @@
 
 #include <Eigen/Geometry>
 
-namespace quorum_monitors {
+namespace quorum_common {
 
 /// Specific force straight off the accelerometer, -9.8 down in a level hover
 struct AccelerationFrd {
@@ -244,6 +244,6 @@ private:
   std::optional<AttitudeState> attitude_;
 };
 
-}  // namespace quorum_monitors
+}  // namespace quorum_common
 
-#endif  // QUORUM_MONITORS__VELOCITY_REFERENCE_HPP_
+#endif  // QUORUM_COMMON__VELOCITY_REFERENCE_HPP_

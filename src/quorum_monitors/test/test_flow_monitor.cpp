@@ -1,8 +1,18 @@
 #include <gtest/gtest.h>
 
+#include "quorum_common/velocity_reference.hpp"
+
 #include "quorum_monitors/flow_monitor.hpp"
 
 namespace quorum_monitors {
+
+using quorum_common::AccelerationFrd;
+using quorum_common::Attitude;
+using quorum_common::AttitudeSample;
+using quorum_common::ImuSample;
+using quorum_common::kGravityMps2;
+using quorum_common::ReferenceLimits;
+
 namespace {
 
 constexpr ReferenceLimits kReferenceLimits{

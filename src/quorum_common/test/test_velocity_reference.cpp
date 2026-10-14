@@ -1,8 +1,8 @@
 #include <gtest/gtest.h>
 
-#include "quorum_monitors/velocity_reference.hpp"
+#include "quorum_common/velocity_reference.hpp"
 
-namespace quorum_monitors {
+namespace quorum_common {
 namespace {
 
 constexpr double kHalfRootTwo = 0.707106781186547524;
@@ -123,4 +123,4 @@ TEST(VelocityReference, ExpiresAnAnchorPastItsAge)
 }
 
 }  // namespace
-}  // namespace quorum_monitors
+}  // namespace quorum_common

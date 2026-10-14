@@ -12,12 +12,23 @@
 #include "quorum_msgs/msg/trust_report.hpp"
 #include "rclcpp/rclcpp.hpp"
 
+#include "quorum_common/px4_time.hpp"
+
 #include "quorum_monitors/gnss_monitor.hpp"
-#include "quorum_monitors/px4_time.hpp"
 #include "quorum_monitors/sensor_monitor.hpp"
 #include "quorum_monitors/trust_publishing.hpp"
 
 namespace quorum_monitors {
+
+using quorum_common::AccelerationFrd;
+using quorum_common::Attitude;
+using quorum_common::AttitudeSample;
+using quorum_common::ImuSample;
+using quorum_common::kUnsetStampUs;
+using quorum_common::ReferenceError;
+using quorum_common::ReferenceLimits;
+using quorum_common::seconds_from_micros;
+using quorum_common::VelocityNed;
 
 // MPC_XY_VEL_MAX, the airframe's own horizontal ceiling
 constexpr double kKinematicLimitMps = 12.0;
