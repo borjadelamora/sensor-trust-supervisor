@@ -33,6 +33,9 @@ if(BUILD_TESTING)
 
   ament_add_gtest(test_trust_state test/test_trust_state.cpp)
   target_include_directories(test_trust_state PRIVATE include)
+
+  ament_add_gtest(test_inertial_clock test/test_inertial_clock.cpp)
+  target_include_directories(test_inertial_clock PRIVATE include)
 endif()
 
 ament_package()
