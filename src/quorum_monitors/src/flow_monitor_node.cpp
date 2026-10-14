@@ -27,6 +27,7 @@ using quorum_common::kUnsetStampUs;
 using quorum_common::ReferenceError;
 using quorum_common::ReferenceLimits;
 using quorum_common::seconds_from_micros;
+using quorum_common::VelocityNe;
 using quorum_common::VelocityNed;
 
 // Five intervals of the 100 Hz imu

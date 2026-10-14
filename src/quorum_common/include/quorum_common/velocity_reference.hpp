@@ -122,6 +122,19 @@ constexpr double kGravityMps2 = 9.8;
                      .down_mps = previous.down_mps + acceleration.down_mps2 * dt_s};
 }
 
+/// Horizontal velocity as optical flow reports it, having no vertical component to report
+struct VelocityNe {
+  double north_mps{};
+  double east_mps{};
+};
+
+/// How far flow's velocity sits from the dead-reckoned one
+[[nodiscard]] inline double horizontal_residual_mps(const VelocityNe& flow,
+                                                    const VelocityNed& reference)
+{
+  return std::hypot(flow.north_mps - reference.north_mps, flow.east_mps - reference.east_mps);
+}
+
 /// Velocity dead-reckoned from an anchor, held whole or not at all
 class VelocityReference final {
 public:

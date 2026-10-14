@@ -12,6 +12,7 @@ using quorum_common::AttitudeSample;
 using quorum_common::ImuSample;
 using quorum_common::kGravityMps2;
 using quorum_common::ReferenceLimits;
+using quorum_common::VelocityNe;
 
 namespace {
 

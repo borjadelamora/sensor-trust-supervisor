@@ -1,7 +1,6 @@
 #ifndef QUORUM_MONITORS__FLOW_MONITOR_HPP_
 #define QUORUM_MONITORS__FLOW_MONITOR_HPP_
 
-#include <cmath>
 #include <cstdint>
 #include <expected>
 #include <optional>
@@ -13,23 +12,10 @@
 
 namespace quorum_monitors {
 
-/// Horizontal velocity as optical flow reports it, having no vertical component to report
-struct VelocityNe {
-  double north_mps{};
-  double east_mps{};
-};
-
 struct FlowSample {
-  VelocityNe velocity{};
+  quorum_common::VelocityNe velocity{};
   double time_s{};
 };
-
-/// How far flow's velocity sits from the dead-reckoned one
-[[nodiscard]] inline double horizontal_residual_mps(const VelocityNe& flow,
-                                                    const quorum_common::VelocityNed& reference)
-{
-  return std::hypot(flow.north_mps - reference.north_mps, flow.east_mps - reference.east_mps);
-}
 
 /// Watches optical flow against a reference anchored on the flow it is fed
 class FlowMonitor final : public SensorMonitor {
@@ -69,7 +55,7 @@ public:
       return std::unexpected(ResidualError::kNoReference);
     }
 
-    const double residual_mps = horizontal_residual_mps(flow.velocity, *held);
+    const double residual_mps = quorum_common::horizontal_residual_mps(flow.velocity, *held);
     debounce_.update(residual_mps, flow.time_s);
     judgement_ = Judgement{.residual = residual_mps, .time_s = flow.time_s};
 
