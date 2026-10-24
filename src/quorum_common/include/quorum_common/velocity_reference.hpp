@@ -128,11 +128,17 @@ struct VelocityNe {
   double east_mps{};
 };
 
-/// How far flow's velocity sits from the dead-reckoned one
+/// Horizontal distance between two velocities
 [[nodiscard]] inline double horizontal_residual_mps(const VelocityNe& flow,
                                                     const VelocityNed& reference)
 {
   return std::hypot(flow.north_mps - reference.north_mps, flow.east_mps - reference.east_mps);
+}
+
+[[nodiscard]] inline double horizontal_residual_mps(const VelocityNe& first,
+                                                    const VelocityNe& second)
+{
+  return std::hypot(first.north_mps - second.north_mps, first.east_mps - second.east_mps);
 }
 
 /// Velocity dead-reckoned from an anchor, held whole or not at all
